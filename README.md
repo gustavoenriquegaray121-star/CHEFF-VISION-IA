@@ -34,7 +34,7 @@ según tu ubicación, preferencias de cocina y el estado de tu despensa.
 ## Desarrollador
 
 **Gustavo Enrique Garay**  
-Inventor independiente — García, Nuevo León, México  
+Inventor independiente — Monterrey, Nuevo León, México  
 Marca: Altea-Garay
 
 ## Versión
