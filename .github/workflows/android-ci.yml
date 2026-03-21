@@ -52,8 +52,8 @@ jobs:
           -keyalg RSA \
           -keysize 2048 \
           -validity 10000 \
-          -storepass ChefVision2026$ \
-          -keypass ChefVision2026$ \
+          -storepass 'ChefVision2026$' \
+          -keypass 'ChefVision2026$' \
           -dname "CN=Gustavo Garay, OU=Altea-Garay, O=Altea-Garay, L=Garcia, S=NuevoLeon, C=MX"
 
     - name: Build Release APK
@@ -61,17 +61,16 @@ jobs:
 
     - name: Sign APK
       run: |
-        jarsigner -verbose \
-          -sigalg SHA256withRSA \
-          -digestalg SHA-256 \
-          -keystore chefvision.keystore \
-          -storepass ChefVision2026$ \
-          -keypass ChefVision2026$ \
-          app/build/outputs/apk/release/app-release-unsigned.apk \
-          chefvision
+        apksigner sign \
+          --ks chefvision.keystore \
+          --ks-pass pass:'ChefVision2026$' \
+          --key-pass pass:'ChefVision2026$' \
+          --ks-key-alias chefvision \
+          --out app/build/outputs/apk/release/ChefVisionIA-signed.apk \
+          app/build/outputs/apk/release/app-release-unsigned.apk
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: ChefVisionIA-release
-        path: app/build/outputs/apk/release/app-release-unsigned.apk
+        path: app/build/outputs/apk/release/ChefVisionIA-signed.apk
