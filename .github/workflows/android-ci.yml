@@ -44,11 +44,34 @@ jobs:
         cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
         cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
+    - name: Generate Keystore
+      run: |
+        keytool -genkeypair -v \
+          -keystore chefvision.keystore \
+          -alias chefvision \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -storepass ChefVision2026$ \
+          -keypass ChefVision2026$ \
+          -dname "CN=Gustavo Garay, OU=Altea-Garay, O=Altea-Garay, L=Garcia, S=NuevoLeon, C=MX"
+
     - name: Build Release APK
       run: ./gradlew assembleRelease
+
+    - name: Sign APK
+      run: |
+        jarsigner -verbose \
+          -sigalg SHA256withRSA \
+          -digestalg SHA-256 \
+          -keystore chefvision.keystore \
+          -storepass ChefVision2026$ \
+          -keypass ChefVision2026$ \
+          app/build/outputs/apk/release/app-release-unsigned.apk \
+          chefvision
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: ChefVisionIA-release
-        path: app/build/outputs/apk/release/*.apk
+        path: app/build/outputs/apk/release/app-release-unsigned.apk
