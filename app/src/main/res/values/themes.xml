@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ChefVisionIA" 
+        parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#FFD700</item>
+        <item name="colorPrimaryVariant">#FFA000</item>
+        <item name="colorOnPrimary">#000000</item>
+        <item name="colorSecondary">#4FC3F7</item>
+        <item name="android:windowBackground">#0D1F0D</item>
+    </style>
+</resources>
