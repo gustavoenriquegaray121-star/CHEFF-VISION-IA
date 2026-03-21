@@ -61,7 +61,8 @@ jobs:
 
     - name: Sign APK
       run: |
-        apksigner sign \
+        APKSIGNER=$(find $ANDROID_HOME -name "apksigner" | head -1)
+        $APKSIGNER sign \
           --ks chefvision.keystore \
           --ks-pass pass:'ChefVision2026$' \
           --key-pass pass:'ChefVision2026$' \
