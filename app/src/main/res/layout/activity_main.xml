@@ -6,13 +6,12 @@
     android:layout_height="match_parent"
     android:background="#0D1F0D">
 
-    <!-- HEADER -->
     <ImageView
         android:id="@+id/imgLogo"
         android:layout_width="72dp"
         android:layout_height="72dp"
         android:layout_marginTop="12dp"
-        android:src="@drawable/logo_cv"
+        android:src="@mipmap/ic_launcher"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -40,7 +39,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- ALERTA DE INGREDIENTES -->
     <TextView
         android:id="@+id/tvAlerts"
         android:layout_width="match_parent"
@@ -54,7 +52,6 @@
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/tvCertified" />
 
-    <!-- CÁMARA -->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
         android:layout_width="match_parent"
@@ -64,7 +61,6 @@
         app:layout_constraintHeight_percent="0.25"
         app:layout_constraintTop_toBottomOf="@id/tvAlerts" />
 
-    <!-- COCINAS -->
     <HorizontalScrollView
         android:id="@+id/scrollCocinas"
         android:layout_width="match_parent"
@@ -111,7 +107,6 @@
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
-    <!-- MODO GOURMET -->
     <com.google.android.material.chip.Chip
         android:id="@+id/chipGourmet"
         android:layout_width="wrap_content"
@@ -122,7 +117,6 @@
         app:layout_constraintTop_toBottomOf="@id/scrollCocinas"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- BOTONES -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnCapture"
         android:layout_width="0dp"
@@ -153,7 +147,6 @@
         app:layout_constraintStart_toEndOf="@id/btnCapture"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- RESULTADOS -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
