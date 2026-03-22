@@ -51,8 +51,10 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
-    // Ubicación y Gemini
+    // Ubicación
     implementation("com.google.android.gms:play-services-location:21.3.0")
-    implementation("com.google.ai.client.generativeai:generativeai:0.2.2")
+    
+    // Gemini actualizado
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }
