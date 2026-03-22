@@ -9,10 +9,11 @@ import kotlinx.coroutines.withContext
 
 object GeminiAnalyticEngine {
 
-    private const val API_KEY = BuildConfig.GEMINI_API_KEY
-    private val model = GenerativeModel(
+    var apiKey: String = ""
+    
+    private fun getModel() = GenerativeModel(
         modelName = "gemini-1.5-flash-001",
-        apiKey = API_KEY
+        apiKey = apiKey
     )
 
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
@@ -68,7 +69,7 @@ object GeminiAnalyticEngine {
                     Usa emojis para hacerlo visual y divertido.
                 """.trimIndent()
 
-                val response = model.generateContent(
+                val response = getModel().generateContent(
                     content {
                         image(bitmap)
                         text(prompt)
