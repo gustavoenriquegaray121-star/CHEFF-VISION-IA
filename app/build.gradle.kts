@@ -14,7 +14,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        val geminiKey = project.findProperty("GEMINI_API_KEY")?.toString() ?: ""
+        // Esta línea es la que conecta con el "Secreto" de GitHub que creamos
+        val geminiKey = System.getenv("GEMINI_API_KEY") ?: project.findProperty("GEMINI_API_KEY")?.toString() ?: ""
+        
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
         buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
     }
