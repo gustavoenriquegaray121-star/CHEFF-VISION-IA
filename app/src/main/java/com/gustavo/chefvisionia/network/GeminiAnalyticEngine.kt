@@ -18,8 +18,8 @@ import java.util.*
 
 object GeminiAnalyticEngine {
 
-    // Se asigna la llave directamente para asegurar la conexión certificada
-    var apiKey: String = "AIzaSyD4gTROinrDOzKBpQiFNOE_dm58brJQlek" 
+    // Se asigna la llave desde el secreto de GitHub que configuramos
+    var apiKey: String = BuildConfig.GEMINI_API_KEY 
 
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
     var onInventoryDataReady: ((JSONArray) -> Unit)? = null
@@ -130,7 +130,7 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                     }))
                 }
 
-                // URL ACTUALIZADA: Versión estable v1 y modelo Flash (Marzo 2026)
+                // URL ESTABLE 2026 (v1 + Flash)
                 val url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey"
 
                 var responseText = ""
@@ -152,9 +152,7 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                     } else {
                         responseText = connection.errorStream?.bufferedReader()?.readText() ?: ""
                     }
-                } catch (e: Exception) { 
-                    success = false
-                }
+                } catch (e: Exception) { success = false }
 
                 val resultText = if (success) {
                     val json = JSONObject(responseText)
@@ -198,10 +196,7 @@ Si falta algo básico para las recetas, menciónalo como oferta.
     }
 
     // Función para liberar los candados en la interfaz Súper Premium
-    fun updatePlanUI(binding: Any) { // Cambia 'Any' por el tipo de tu ViewBinding
-        try {
-            // Se quitan los candados respetando el texto solicitado
-            // binding.chipFrench.text = "Francesa 🇫🇷"
-        } catch (e: Exception) {}
+    fun updatePlanUI(binding: Any) { 
+        // binding.chipFrench.text = "Francesa 🇫🇷" 
     }
 }
