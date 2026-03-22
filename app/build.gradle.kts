@@ -14,23 +14,20 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // 🔥 API KEY SEGURA (GitHub + local fallback)
-        val geminiKey = project.findProperty("GEMINI_API_KEY") as String?
-            ?: System.getenv("GEMINI_API_KEY")
-            ?: ""
+        // 🔥 SOLUCIÓN ESTABLE (SIN CRASH EN BUILD)
+        val geminiKey = project.findProperty("GEMINI_API_KEY")?.toString() ?: ""
 
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
     }
 
     buildTypes {
         debug {
-            // 👇 Para pruebas locales (si quieres meter key manual)
-            buildConfigField("String", "IS_DEBUG_BUILD", "true")
+            buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
         }
 
         release {
             isMinifyEnabled = false
-            buildConfigField("String", "IS_DEBUG_BUILD", "false")
+            buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -71,7 +68,7 @@ dependencies {
     // Ubicación
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
-    // 🔥 Gemini (aunque tú usas HTTP manual, lo dejamos listo para futuro)
+    // Gemini (opcional a futuro)
     implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
 
     // Coroutines
