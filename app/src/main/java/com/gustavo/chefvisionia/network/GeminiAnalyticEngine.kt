@@ -16,7 +16,7 @@ import java.net.URL
 
 object GeminiAnalyticEngine {
 
-    // 🔐 API KEY DESDE BUILD (IMPORTANTE)
+    // 🔐 API KEY DESDE BUILD
     var apiKey: String = BuildConfig.GEMINI_API_KEY
 
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
@@ -28,7 +28,6 @@ object GeminiAnalyticEngine {
     private val isDemoMode: Boolean
         get() = apiKey.isEmpty() && !isDeveloperMode
 
-    // 🔥 ACCESO TOTAL
     fun hasPremiumAccess(userHasPaid: Boolean): Boolean {
         return userHasPaid || isDeveloperMode
     }
@@ -43,7 +42,6 @@ object GeminiAnalyticEngine {
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 
-    // 💎 DEMO PRO (MEJORADO)
     private fun generarRespuestaDemo(
         cuisine: String,
         gourmet: Boolean,
@@ -74,14 +72,14 @@ Estamos optimizando la conexión con el motor IA.
    ⏱️ 25 min
    🧂 Ingredientes: pollo, ajo, tomate, aceite
    👨‍🍳 Preparación: sofríe ajo, agrega pollo, cocina con tomate
-   💡 Tip: usa fuego medio para mejor sabor
+   💡 Tip: usa fuego medio
 
-2. 🥗 Ensalada fresca casera
+2. 🥗 Ensalada fresca
 3. 🍳 Omelette sencillo
 
 $extra
 
-💡 Tip: Mejora iluminación y enfoque para resultados reales.
+💡 Tip: Mejora iluminación para resultados reales.
         """.trimIndent()
     }
 
@@ -99,7 +97,6 @@ $extra
         withContext(Dispatchers.IO) {
             try {
 
-                // 🔹 DEMO CONTROLADO
                 if (isDemoMode) {
                     withContext(Dispatchers.Main) {
                         output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
@@ -110,7 +107,7 @@ $extra
 
                 if (apiKey.isEmpty()) {
                     withContext(Dispatchers.Main) {
-                        output.text = "❌ API KEY VACÍA (CONFIG ERROR)"
+                        output.text = "❌ API KEY VACÍA"
                     }
                     return@withContext
                 }
@@ -125,55 +122,16 @@ $extra
 
                 val base64Image = bitmapToBase64(bitmap)
 
-                val modeText = when {
-                    fitness -> "fitness con macros y alto contenido proteico"
-                    vegan   -> "100% vegana"
-                    dessert -> "postres creativos"
-                    gourmet -> "gourmet de alta cocina"
-                    else    -> "casera"
-                }
-
-                val fitnessExtra = if (fitness)
-                    "\nIncluye calorías, proteínas, carbohidratos y grasas."
-                else ""
-
-                val wineExtra = if (gourmet)
-                    "\nIncluye maridaje profesional."
-                else ""
-
-                val dessertExtra = if (dessert)
-                    "\nSugiere un postre que combine perfectamente."
-                else ""
-
-                val inventoryNote = if (inventoryContext.isNotEmpty())
-                    "\nIngredientes disponibles: $inventoryContext."
-                else ""
-
                 val promptText = """
 Eres Chef Vision IA 🍳
 
-REGLAS:
-- SOLO ingredientes visibles
-- NO inventar
-- Sé preciso
+Detecta ingredientes reales y genera recetas profesionales.
 
 1. INGREDIENTES DETECTADOS
-
-2. 3 RECETAS ($cuisine - $country, estilo $modeText):
-- Nombre
-- Tiempo
-- Ingredientes
-- Pasos
-- Tip
-$fitnessExtra
-$wineExtra
-$dessertExtra
-
+2. 3 RECETAS ($cuisine - $country)
 3. RECETA LOCAL
 
-$inventoryNote
-
-Responde en español profesional y atractivo.
+Responde claro en español.
                 """.trimIndent()
 
                 val requestBody = JSONObject().apply {
@@ -192,9 +150,9 @@ Responde en español profesional y atractivo.
                     ))
                 }
 
-                // ✅ MODELO ESTABLE REAL
+                // 🔥 ENDPOINT CORRECTO
                 val url = URL(
-                    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey"
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
                 )
 
                 val connection = url.openConnection() as HttpURLConnection
@@ -238,42 +196,19 @@ Responde en español profesional y atractivo.
                         builder.toString()
 
                     } catch (e: Exception) {
-                        if (isDeveloperMode)
-                            "❌ ERROR PARSEO:\n${e.message}\n$responseText"
-                        else
-                            generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                        "❌ ERROR PARSEO:\n${e.message}\n$responseText"
                     }
                 } else {
-                    if (isDeveloperMode)
-                        "❌ ERROR $responseCode:\n$responseText"
-                    else
-                        generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                    "❌ ERROR $responseCode:\n$responseText"
                 }
-
-                val ingredientLines = resultText
-                    .substringAfter("INGREDIENTES DETECTADOS", "")
-                    .substringBefore("RECETAS", "")
-                    .lines()
-                    .filter { it.trim().startsWith("-") || it.trim().startsWith("•") }
-                    .map {
-                        it.replace("-", "")
-                            .replace("•", "")
-                            .trim()
-                            .lowercase()
-                    }
-                    .filter { it.isNotEmpty() }
 
                 withContext(Dispatchers.Main) {
                     output.text = resultText
-                    onIngredientsDetected?.invoke(ingredientLines)
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    if (isDeveloperMode)
-                        output.text = "❌ ERROR CRÍTICO:\n${e.message}"
-                    else
-                        output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                    output.text = "❌ ERROR CRÍTICO:\n${e.message}"
                 }
             }
         }
