@@ -18,9 +18,17 @@ object GeminiAnalyticEngine {
     var apiKey: String = ""
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
 
-    // DEMO SOLO SI NO HAY API
+    // 🔥 MODO DESARROLLADOR
+    private val isDeveloperMode = true
+
+    // 🔥 DEMO SOLO SI NO HAY API Y NO ERES DEV
     private val isDemoMode: Boolean
-        get() = apiKey.isEmpty()
+        get() = apiKey.isEmpty() && !isDeveloperMode
+
+    // 🔥 ACCESO PREMIUM TOTAL PARA TI
+    fun hasPremiumAccess(userHasPaid: Boolean): Boolean {
+        return userHasPaid || isDeveloperMode
+    }
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val outputStream = ByteArrayOutputStream()
@@ -28,24 +36,22 @@ object GeminiAnalyticEngine {
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 
-    // 💎 DEMO PRO (MEJORADO)
     private fun generarRespuestaDemo(cuisine: String): String {
         return """
 ⚡ MODO DEMO ACTIVO
 
 Estamos optimizando la conexión con nuestro motor de inteligencia culinaria.
-Mientras tanto, aquí tienes una sugerencia inteligente:
 
 🍳 INGREDIENTES DETECTADOS:
-- ingredientes comunes de cocina
-- posible alimento procesado
+- ingredientes comunes
+- posible alimento
 
 🍽️ RECETAS SUGERIDAS ($cuisine):
-1. Preparación rápida casera
-2. Platillo sencillo optimizado
-3. Opción económica y funcional
+1. Preparación rápida
+2. Platillo sencillo
+3. Opción económica
 
-💡 Tip del chef: Usa buena iluminación y enfoca bien los ingredientes para obtener resultados más precisos.
+💡 Tip: Usa mejor iluminación para mayor precisión.
         """.trimIndent()
     }
 
@@ -63,7 +69,7 @@ Mientras tanto, aquí tienes una sugerencia inteligente:
         withContext(Dispatchers.IO) {
             try {
 
-                // DEMO SI NO HAY API
+                // DEMO CONTROLADO
                 if (isDemoMode) {
                     withContext(Dispatchers.Main) {
                         output.text = generarRespuestaDemo(cuisine)
@@ -95,7 +101,7 @@ Mientras tanto, aquí tienes una sugerencia inteligente:
                 else ""
 
                 val wineExtra = if (gourmet)
-                    "\nSugiere un vino o bebida ideal que haga maridaje perfecto."
+                    "\nSugiere un vino o bebida ideal para maridaje."
                 else ""
 
                 val inventoryNote = if (inventoryContext.isNotEmpty())
@@ -106,19 +112,19 @@ Mientras tanto, aquí tienes una sugerencia inteligente:
 Eres Chef Vision IA 🍳
 
 REGLAS:
-- SOLO usa ingredientes visibles en la imagen
+- SOLO usa ingredientes visibles
 - NO inventes ingredientes
-- Si no estás seguro, dilo claramente
+- Si dudas, dilo
 
 1. INGREDIENTES DETECTADOS:
-Lista clara de ingredientes visibles.
+Lista clara
 
 2. 3 RECETAS ($cuisine - $country, estilo $modeText):
 - Nombre
 - Tiempo
 - Ingredientes
 - Pasos
-- Tip del chef
+- Tip
 $fitnessExtra
 $wineExtra
 
@@ -126,7 +132,7 @@ $wineExtra
 
 $inventoryNote
 
-Responde en español con estilo profesional, atractivo y apetitoso.
+Responde en español con estilo gourmet.
                 """.trimIndent()
 
                 val requestBody = JSONObject().apply {
@@ -174,7 +180,10 @@ Responde en español con estilo profesional, atractivo y apetitoso.
                         val json = JSONObject(responseText)
 
                         if (json.has("error")) {
-                            generarRespuestaDemo(cuisine)
+                            if (isDeveloperMode)
+                                "❌ API ERROR:\n${json.getJSONObject("error")}"
+                            else
+                                generarRespuestaDemo(cuisine)
                         } else {
                             val parts = json.getJSONArray("candidates")
                                 .getJSONObject(0)
@@ -197,7 +206,10 @@ Responde en español con estilo profesional, atractivo y apetitoso.
                         generarRespuestaDemo(cuisine)
                     }
                 } else {
-                    generarRespuestaDemo(cuisine)
+                    if (isDeveloperMode)
+                        "❌ Error $responseCode:\n$responseText"
+                    else
+                        generarRespuestaDemo(cuisine)
                 }
 
                 val ingredientLines = resultText
