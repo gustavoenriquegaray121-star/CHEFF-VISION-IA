@@ -5,6 +5,7 @@ import android.content.Intent
 import android.location.Geocoder
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -12,6 +13,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.LocationServices
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.gustavo.chefvisionia.BuildConfig
 import com.gustavo.chefvisionia.databinding.ActivityMainBinding
 import com.gustavo.chefvisionia.network.GeminiAnalyticEngine
 import com.gustavo.chefvisionia.utils.InventoryManager
@@ -24,7 +27,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var imageCapture: ImageCapture? = null
     private var country: String = "México"
-    private var cameraStarted = false
+    private var userPlan = "GRATIS"
+    private var scanCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +36,8 @@ class MainActivity : AppCompatActivity() {
         try {
             binding = ActivityMainBinding.inflate(layoutInflater)
             setContentView(binding.root)
+
+            GeminiAnalyticEngine.apiKey = BuildConfig.GEMINI_API_KEY
 
             InventoryManager.load(this)
             showAlerts()
@@ -45,30 +51,70 @@ class MainActivity : AppCompatActivity() {
 
             binding.chipMexican.isChecked = true
 
+            // Truco secreto desarrollador
+            binding.tvTitle.setOnLongClickListener {
+                scanCount = 0
+                getSharedPreferences("ChefPrefs", MODE_PRIVATE)
+                    .edit().putInt("scans_today", 0).apply()
+                Toast.makeText(this, "🚀 Modo Desarrollador: Escaneos reseteados", Toast.LENGTH_LONG).show()
+                true
+            }
+
             val launcher = registerForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()
             ) { permissions ->
-                if (permissions[Manifest.permission.CAMERA] == true) {
-                    startCamera()
+                if (permissions[Manifest.permission.CAMERA] == true) startCamera()
+                if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) fetchLocation()
+            }
+
+            launcher.launch(arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ))
+
+            binding.btnCapture.setOnClickListener {
+                val prefs = getSharedPreferences("ChefPrefs", MODE_PRIVATE)
+                val lastDate = prefs.getString("last_scan_date", "")
+                val currentDate = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+                if (currentDate != lastDate) {
+                    scanCount = 0
+                    prefs.edit().putString("last_scan_date", currentDate).putInt("scans_today", 0).apply()
+                } else {
+                    scanCount = prefs.getInt("scans_today", 0)
                 }
-                if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
-                    fetchLocation()
+
+                if (userPlan == "GRATIS" && scanCount >= 3) {
+                    showSubscriptionDialog()
+                } else {
+                    if (imageCapture != null) {
+                        takePhoto()
+                        scanCount++
+                        prefs.edit().putInt("scans_today", scanCount).apply()
+                        Toast.makeText(this, "📸 Escaneo $scanCount de 3 hoy", Toast.LENGTH_SHORT).show()
+                    } else {
+                        binding.tvRecipes.text = "⚠️ Cámara no lista."
+                    }
                 }
             }
 
-            launcher.launch(
-                arrayOf(
-                    Manifest.permission.CAMERA,
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
+            // Chips bloqueados para plan gratis
+            listOf(binding.chipThai, binding.chipJapanese, binding.chipIndian,
+                binding.chipMediterranean, binding.chipAmerican, binding.chipFrench).forEach { chip ->
+                chip.setOnClickListener {
+                    if (userPlan == "GRATIS") {
+                        chip.isChecked = false
+                        binding.chipMexican.isChecked = true
+                        showSubscriptionDialog()
+                    }
+                }
+            }
 
-            binding.btnCapture.setOnClickListener {
-                if (imageCapture != null) {
-                    takePhoto()
-                } else {
-                    binding.tvRecipes.text = "⚠️ Cámara no lista. Verifica permisos."
+            binding.chipGourmet.setOnClickListener {
+                if (userPlan == "GRATIS") {
+                    binding.chipGourmet.isChecked = false
+                    showSubscriptionDialog()
                 }
             }
 
@@ -82,14 +128,38 @@ class MainActivity : AppCompatActivity() {
                         setPackage("com.whatsapp")
                     }
                     startActivity(intent)
-                } catch (e: Exception) {
-                    // WhatsApp no instalado
-                }
+                } catch (e: Exception) {}
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    private fun showSubscriptionDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("✨ ¡Desbloquea todo el sabor!")
+            .setMessage(
+                "Has alcanzado el límite diario o intentas usar una función exclusiva.\n\n" +
+                "⭐ PREMIUM (\$699/año):\n" +
+                "• 20 escaneos diarios\n" +
+                "• Todas las cocinas internacionales\n" +
+                "• Modo Gourmet ✅\n" +
+                "• Sin anuncios\n\n" +
+                "👑 SÚPER PREMIUM (\$899/año):\n" +
+                "• Escaneos ILIMITADOS\n" +
+                "• Modo Fitness (Calorías) 💪\n" +
+                "• Postres, Vegano y Maridajes 🍷\n" +
+                "• Lista de compras compartible"
+            )
+            .setPositiveButton("👑 SÚPER PREMIUM") { _, _ ->
+                Toast.makeText(this, "Próximamente...", Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("⭐ PREMIUM") { _, _ ->
+                Toast.makeText(this, "Próximamente...", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Luego") { dialog, _ -> dialog.dismiss() }
+            .show()
     }
 
     private fun showAlerts() {
@@ -101,9 +171,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 binding.tvAlerts.visibility = View.GONE
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun fetchLocation() {
@@ -114,18 +182,12 @@ class MainActivity : AppCompatActivity() {
                     loc?.let {
                         try {
                             val geocoder = Geocoder(this, Locale.getDefault())
-                            val addresses = geocoder.getFromLocation(
-                                it.latitude, it.longitude, 1
-                            )
-                            country = addresses?.get(0)?.countryName ?: "México"
-                        } catch (e: Exception) {
-                            country = "México"
-                        }
+                            country = geocoder.getFromLocation(it.latitude, it.longitude, 1)
+                                ?.get(0)?.countryName ?: "México"
+                        } catch (e: Exception) { country = "México" }
                     }
                 }
-        } catch (e: Exception) {
-            country = "México"
-        }
+        } catch (e: Exception) { country = "México" }
     }
 
     private fun startCamera() {
@@ -142,12 +204,8 @@ class MainActivity : AppCompatActivity() {
                         .build()
                     cameraProvider.unbindAll()
                     cameraProvider.bindToLifecycle(
-                        this,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview,
-                        imageCapture!!
+                        this, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture!!
                     )
-                    cameraStarted = true
                 } catch (e: Exception) {
                     binding.tvRecipes.text = "❌ Error cámara: ${e.message}"
                 }
@@ -160,25 +218,20 @@ class MainActivity : AppCompatActivity() {
     private fun takePhoto() {
         binding.btnCapture.isEnabled = false
         binding.tvRecipes.text = "🔍 Analizando ingredientes con IA..."
-
         val file = File(externalCacheDir, "chef_scan.jpg")
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
-
         imageCapture?.takePicture(
-            outputOptions,
+            ImageCapture.OutputFileOptions.Builder(file).build(),
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(result: ImageCapture.OutputFileResults) {
-                    val cuisine = getCuisineSelected()
-                    val inventoryContext = InventoryManager.getInventoryContext()
                     lifecycleScope.launch {
                         GeminiAnalyticEngine.analyze(
                             path = file.absolutePath,
                             output = binding.tvRecipes,
-                            cuisine = cuisine,
+                            cuisine = getCuisineSelected(),
                             country = country,
                             gourmet = binding.chipGourmet.isChecked,
-                            inventoryContext = inventoryContext
+                            inventoryContext = InventoryManager.getInventoryContext()
                         )
                         binding.btnCapture.isEnabled = true
                         showAlerts()
