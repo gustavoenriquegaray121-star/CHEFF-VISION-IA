@@ -11,7 +11,7 @@ object GeminiAnalyticEngine {
 
     private const val API_KEY = "AIzaSyCYONYuJMUiFMrqyOkoFxxiVf4hxgT9XbM"
     private val model = GenerativeModel(
-        modelName = "gemini-1.5-flash",
+        modelName = "gemini-pro-vision",
         apiKey = API_KEY
     )
 
