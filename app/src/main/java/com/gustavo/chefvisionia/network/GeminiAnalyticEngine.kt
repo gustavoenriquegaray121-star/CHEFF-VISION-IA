@@ -72,6 +72,10 @@ $extra
     ) {
         withContext(Dispatchers.IO) {
             try {
+                // Validación de acceso para desarrollador (bypass de pago)
+                val canUsePremium = hasPremiumAccess(false)
+                val canUseSuper = hasSuperPremiumAccess(false)
+
                 if (isDemoMode) {
                     withContext(Dispatchers.Main) {
                         output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
@@ -195,4 +199,3 @@ Si falta algo básico para las recetas, menciónalo como oferta.
         }
     }
 }
-
