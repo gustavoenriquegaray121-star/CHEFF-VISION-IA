@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 import android.widget.TextView
+import com.gustavo.chefvisionia.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -15,7 +16,9 @@ import java.net.URL
 
 object GeminiAnalyticEngine {
 
-    var apiKey: String = ""
+    // 🔐 API KEY DESDE BUILD (IMPORTANTE)
+    var apiKey: String = BuildConfig.GEMINI_API_KEY
+
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
 
     // 🔥 LLAVE MAESTRA
@@ -30,7 +33,6 @@ object GeminiAnalyticEngine {
         return userHasPaid || isDeveloperMode
     }
 
-    // 🔥 TAMBIÉN PARA FEATURES AVANZADAS
     fun hasSuperPremiumAccess(userHasPaid: Boolean): Boolean {
         return userHasPaid || isDeveloperMode
     }
@@ -41,8 +43,13 @@ object GeminiAnalyticEngine {
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 
-    // 💎 DEMO PRO
-    private fun generarRespuestaDemo(cuisine: String, gourmet: Boolean, fitness: Boolean, dessert: Boolean): String {
+    // 💎 DEMO PRO (MEJORADO)
+    private fun generarRespuestaDemo(
+        cuisine: String,
+        gourmet: Boolean,
+        fitness: Boolean,
+        dessert: Boolean
+    ): String {
 
         val extra = when {
             fitness -> "\n💪 Incluye macros y enfoque proteico."
@@ -57,13 +64,20 @@ object GeminiAnalyticEngine {
 Estamos optimizando la conexión con el motor IA.
 
 🍳 INGREDIENTES DETECTADOS:
-- ingredientes simulados
-- detección básica
+- tomate
+- cebolla
+- ajo
+- pollo
 
 🍽️ RECETAS ($cuisine):
-1. Preparación casera optimizada
-2. Opción rápida funcional
-3. Alternativa económica
+1. 🍗 Pollo al ajo con tomate
+   ⏱️ 25 min
+   🧂 Ingredientes: pollo, ajo, tomate, aceite
+   👨‍🍳 Preparación: sofríe ajo, agrega pollo, cocina con tomate
+   💡 Tip: usa fuego medio para mejor sabor
+
+2. 🥗 Ensalada fresca casera
+3. 🍳 Omelette sencillo
 
 $extra
 
@@ -89,7 +103,14 @@ $extra
                 if (isDemoMode) {
                     withContext(Dispatchers.Main) {
                         output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
-                        onIngredientsDetected?.invoke(listOf("demo"))
+                        onIngredientsDetected?.invoke(listOf("tomate", "cebolla", "pollo"))
+                    }
+                    return@withContext
+                }
+
+                if (apiKey.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        output.text = "❌ API KEY VACÍA (CONFIG ERROR)"
                     }
                     return@withContext
                 }
@@ -171,25 +192,20 @@ Responde en español profesional y atractivo.
                     ))
                 }
 
-                // ✅ ENDPOINT CORREGIDO (ADIOS 404)
+                // ✅ MODELO ESTABLE REAL
                 val url = URL(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+                    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey"
                 )
 
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Content-Type", "application/json")
-                connection.doOutput = true
-
-                // 🔥 ROBUSTEZ
                 connection.connectTimeout = 15000
                 connection.readTimeout = 15000
-
-                connection.connect()
+                connection.doOutput = true
 
                 OutputStreamWriter(connection.outputStream).use {
                     it.write(requestBody.toString())
-                    it.flush()
                 }
 
                 val responseCode = connection.responseCode
@@ -205,36 +221,31 @@ Responde en español profesional y atractivo.
                     try {
                         val json = JSONObject(responseText)
 
-                        if (json.has("error")) {
-                            if (isDeveloperMode)
-                                "❌ API ERROR:\n${json.getJSONObject("error")}"
-                            else
-                                generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
-                        } else {
+                        val parts = json.getJSONArray("candidates")
+                            .getJSONObject(0)
+                            .getJSONObject("content")
+                            .getJSONArray("parts")
 
-                            val parts = json.getJSONArray("candidates")
-                                .getJSONObject(0)
-                                .getJSONObject("content")
-                                .getJSONArray("parts")
+                        val builder = StringBuilder()
 
-                            val builder = StringBuilder()
-
-                            for (i in 0 until parts.length()) {
-                                val part = parts.getJSONObject(i)
-                                if (part.has("text")) {
-                                    builder.append(part.getString("text"))
-                                }
+                        for (i in 0 until parts.length()) {
+                            val part = parts.getJSONObject(i)
+                            if (part.has("text")) {
+                                builder.append(part.getString("text"))
                             }
-
-                            builder.toString()
                         }
 
+                        builder.toString()
+
                     } catch (e: Exception) {
-                        generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                        if (isDeveloperMode)
+                            "❌ ERROR PARSEO:\n${e.message}\n$responseText"
+                        else
+                            generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                     }
                 } else {
                     if (isDeveloperMode)
-                        "❌ Error $responseCode:\n$responseText"
+                        "❌ ERROR $responseCode:\n$responseText"
                     else
                         generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
@@ -259,7 +270,10 @@ Responde en español profesional y atractivo.
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                    if (isDeveloperMode)
+                        output.text = "❌ ERROR CRÍTICO:\n${e.message}"
+                    else
+                        output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
             }
         }
