@@ -18,7 +18,8 @@ import java.util.*
 
 object GeminiAnalyticEngine {
 
-    var apiKey: String = BuildConfig.GEMINI_API_KEY 
+    // Se asigna la llave directamente para asegurar la conexión certificada
+    var apiKey: String = "AIzaSyD4gTROinrDOzKBpQiFNOE_dm58brJQlek" 
 
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
     var onInventoryDataReady: ((JSONArray) -> Unit)? = null
@@ -125,8 +126,6 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                     }))
                 }
 
-                // CORRECCIÓN CLAVE: Usamos gemini-1.5-flash (sin el '-latest' que causa el 404)
-                // Y mantenemos tus dos intentos por si falla uno
                 val endpoints = listOf(
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey",
                     "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey"
