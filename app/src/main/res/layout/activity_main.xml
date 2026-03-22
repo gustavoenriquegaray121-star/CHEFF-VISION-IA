@@ -32,7 +32,7 @@
         android:id="@+id/tvPlan"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🆓 Plan Gratuito — 3 escaneos/día"
+        android:text="🆓 Plan Gratuito: 3 escaneos por día (desayuno, comida y cena)"
         android:textColor="#888888"
         android:textSize="11sp"
         android:gravity="center"
@@ -198,6 +198,16 @@
             android:textStyle="bold"/>
 
     </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnShareWhatsApp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="📲 COMPARTIR LISTA POR WHATSAPP"
+        android:backgroundTint="#075E54"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnUpgrade"
