@@ -18,15 +18,20 @@ object GeminiAnalyticEngine {
     var apiKey: String = ""
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
 
-    // 🔥 MODO DESARROLLADOR
+    // 🔥 LLAVE MAESTRA
     private val isDeveloperMode = true
 
     // 🔥 DEMO SOLO SI NO HAY API Y NO ERES DEV
     private val isDemoMode: Boolean
         get() = apiKey.isEmpty() && !isDeveloperMode
 
-    // 🔥 ACCESO PREMIUM TOTAL PARA TI
+    // 🔥 ACCESO TOTAL
     fun hasPremiumAccess(userHasPaid: Boolean): Boolean {
+        return userHasPaid || isDeveloperMode
+    }
+
+    // 🔥 TAMBIÉN PARA FEATURES AVANZADAS
+    fun hasSuperPremiumAccess(userHasPaid: Boolean): Boolean {
         return userHasPaid || isDeveloperMode
     }
 
@@ -36,22 +41,33 @@ object GeminiAnalyticEngine {
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 
-    private fun generarRespuestaDemo(cuisine: String): String {
+    // 💎 DEMO PRO
+    private fun generarRespuestaDemo(cuisine: String, gourmet: Boolean, fitness: Boolean, dessert: Boolean): String {
+
+        val extra = when {
+            fitness -> "\n💪 Incluye macros y enfoque proteico."
+            dessert -> "\n🍰 Incluye sugerencia de postre."
+            gourmet -> "\n🍷 Incluye maridaje profesional."
+            else -> ""
+        }
+
         return """
 ⚡ MODO DEMO ACTIVO
 
-Estamos optimizando la conexión con nuestro motor de inteligencia culinaria.
+Estamos optimizando la conexión con el motor IA.
 
 🍳 INGREDIENTES DETECTADOS:
-- ingredientes comunes
-- posible alimento
+- ingredientes simulados
+- detección básica
 
-🍽️ RECETAS SUGERIDAS ($cuisine):
-1. Preparación rápida
-2. Platillo sencillo
-3. Opción económica
+🍽️ RECETAS ($cuisine):
+1. Preparación casera optimizada
+2. Opción rápida funcional
+3. Alternativa económica
 
-💡 Tip: Usa mejor iluminación para mayor precisión.
+$extra
+
+💡 Tip: Mejora iluminación y enfoque para resultados reales.
         """.trimIndent()
     }
 
@@ -69,11 +85,11 @@ Estamos optimizando la conexión con nuestro motor de inteligencia culinaria.
         withContext(Dispatchers.IO) {
             try {
 
-                // DEMO CONTROLADO
+                // 🔹 DEMO CONTROLADO
                 if (isDemoMode) {
                     withContext(Dispatchers.Main) {
-                        output.text = generarRespuestaDemo(cuisine)
-                        onIngredientsDetected?.invoke(listOf("ingrediente demo"))
+                        output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                        onIngredientsDetected?.invoke(listOf("demo"))
                     }
                     return@withContext
                 }
@@ -81,7 +97,7 @@ Estamos optimizando la conexión con nuestro motor de inteligencia culinaria.
                 val bitmap = BitmapFactory.decodeFile(path)
                 if (bitmap == null) {
                     withContext(Dispatchers.Main) {
-                        output.text = generarRespuestaDemo(cuisine)
+                        output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                     }
                     return@withContext
                 }
@@ -89,11 +105,11 @@ Estamos optimizando la conexión con nuestro motor de inteligencia culinaria.
                 val base64Image = bitmapToBase64(bitmap)
 
                 val modeText = when {
-                    fitness -> "fitness con calorías aproximadas y alto contenido proteico"
-                    vegan   -> "100% vegana sin productos de origen animal"
-                    dessert -> "postres y dulces creativos"
-                    gourmet -> "presentación gourmet de restaurante de lujo"
-                    else    -> "casera, fácil y económica"
+                    fitness -> "fitness con macros y alto contenido proteico"
+                    vegan   -> "100% vegana"
+                    dessert -> "postres creativos"
+                    gourmet -> "gourmet de alta cocina"
+                    else    -> "casera"
                 }
 
                 val fitnessExtra = if (fitness)
@@ -101,23 +117,26 @@ Estamos optimizando la conexión con nuestro motor de inteligencia culinaria.
                 else ""
 
                 val wineExtra = if (gourmet)
-                    "\nSugiere un vino o bebida ideal para maridaje."
+                    "\nIncluye maridaje profesional."
+                else ""
+
+                val dessertExtra = if (dessert)
+                    "\nSugiere un postre que combine perfectamente."
                 else ""
 
                 val inventoryNote = if (inventoryContext.isNotEmpty())
-                    "\nIngredientes disponibles: $inventoryContext. Prioriza los más antiguos."
+                    "\nIngredientes disponibles: $inventoryContext."
                 else ""
 
                 val promptText = """
 Eres Chef Vision IA 🍳
 
 REGLAS:
-- SOLO usa ingredientes visibles
-- NO inventes ingredientes
-- Si dudas, dilo
+- SOLO ingredientes visibles
+- NO inventar
+- Sé preciso
 
-1. INGREDIENTES DETECTADOS:
-Lista clara
+1. INGREDIENTES DETECTADOS
 
 2. 3 RECETAS ($cuisine - $country, estilo $modeText):
 - Nombre
@@ -127,12 +146,13 @@ Lista clara
 - Tip
 $fitnessExtra
 $wineExtra
+$dessertExtra
 
 3. RECETA LOCAL
 
 $inventoryNote
 
-Responde en español con estilo gourmet.
+Responde en español profesional y atractivo.
                 """.trimIndent()
 
                 val requestBody = JSONObject().apply {
@@ -151,19 +171,25 @@ Responde en español con estilo gourmet.
                     ))
                 }
 
+                // ✅ ENDPOINT CORREGIDO (ADIOS 404)
                 val url = URL(
-                    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
                 )
 
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.doOutput = true
-                connection.connectTimeout = 30000
-                connection.readTimeout = 30000
+
+                // 🔥 ROBUSTEZ
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
+
+                connection.connect()
 
                 OutputStreamWriter(connection.outputStream).use {
                     it.write(requestBody.toString())
+                    it.flush()
                 }
 
                 val responseCode = connection.responseCode
@@ -183,8 +209,9 @@ Responde en español con estilo gourmet.
                             if (isDeveloperMode)
                                 "❌ API ERROR:\n${json.getJSONObject("error")}"
                             else
-                                generarRespuestaDemo(cuisine)
+                                generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                         } else {
+
                             val parts = json.getJSONArray("candidates")
                                 .getJSONObject(0)
                                 .getJSONObject("content")
@@ -203,13 +230,13 @@ Responde en español con estilo gourmet.
                         }
 
                     } catch (e: Exception) {
-                        generarRespuestaDemo(cuisine)
+                        generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                     }
                 } else {
                     if (isDeveloperMode)
                         "❌ Error $responseCode:\n$responseText"
                     else
-                        generarRespuestaDemo(cuisine)
+                        generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
 
                 val ingredientLines = resultText
@@ -232,7 +259,7 @@ Responde en español con estilo gourmet.
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    output.text = generarRespuestaDemo(cuisine)
+                    output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
             }
         }
