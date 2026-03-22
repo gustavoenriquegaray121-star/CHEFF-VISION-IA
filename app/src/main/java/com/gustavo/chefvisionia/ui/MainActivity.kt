@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity() {
     private var country: String = "México"
     private var userPlan = "GRATIS"
     private var scanCount = 0
+    private var lastRecipeText = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,7 +117,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Chips bloqueados — Tailandesa, Japonesa, India, Mediterránea, Americana, Francesa = Premium
+            // Chips bloqueados — Premium
             listOf(
                 binding.chipThai, binding.chipJapanese, binding.chipIndian,
                 binding.chipMediterranean, binding.chipAmerican, binding.chipFrench
@@ -153,18 +154,39 @@ class MainActivity : AppCompatActivity() {
                 showSubscriptionDialog()
             }
 
-            // Lista de compras con precio estimado
+            // Lista de compras
             binding.btnShoppingList.setOnClickListener {
                 val list = InventoryManager.getShoppingList()
                 binding.tvRecipes.text = list
+                lastRecipeText = list
+            }
+
+            // Botón compartir por WhatsApp
+            binding.btnShareWhatsApp.setOnClickListener {
+                val textToShare = if (lastRecipeText.isNotEmpty())
+                    lastRecipeText
+                else
+                    InventoryManager.getShoppingList()
+
                 try {
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, list)
+                        putExtra(Intent.EXTRA_TEXT, textToShare)
                         setPackage("com.whatsapp")
                     }
                     startActivity(intent)
-                } catch (e: Exception) {}
+                } catch (e: Exception) {
+                    // WhatsApp no instalado — compartir con cualquier app
+                    try {
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, textToShare)
+                        }
+                        startActivity(Intent.createChooser(intent, "Compartir vía..."))
+                    } catch (ex: Exception) {
+                        Toast.makeText(this, "No se pudo compartir", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
 
         } catch (e: Exception) {
@@ -174,9 +196,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun updatePlanUI() {
         binding.tvPlan.text = when (userPlan) {
-            "PREMIUM" -> "⭐ Plan Premium — 20 escaneos/día"
-            "SUPER"   -> "👑 Plan Súper Premium — Ilimitado"
-            else      -> "🆓 Plan Gratuito — 3 escaneos/día"
+            "PREMIUM" -> "⭐ Plan Premium: 20 escaneos por día"
+            "SUPER"   -> "👑 Plan Súper Premium: escaneos ilimitados"
+            else      -> "🆓 Plan Gratuito: 3 escaneos por día (desayuno, comida y cena)"
         }
     }
 
@@ -189,12 +211,12 @@ class MainActivity : AppCompatActivity() {
                 "• 20 escaneos diarios\n" +
                 "• Todas las cocinas internacionales\n" +
                 "• Modo Gourmet ✅\n" +
+                "• Maridaje con vinos 🍷\n" +
                 "• Sin anuncios\n\n" +
                 "👑 SÚPER PREMIUM \$899/año:\n" +
                 "• Escaneos ILIMITADOS\n" +
                 "• Modo Fitness con calorías 💪\n" +
                 "• Postres y Vegano 🎂🥗\n" +
-                "• Maridaje con vinos 🍷\n" +
                 "• Lista de compras con precios estimados\n" +
                 "• Alertas inteligentes de despensa\n" +
                 "• Memoria de ingredientes favoritos"
@@ -297,6 +319,7 @@ class MainActivity : AppCompatActivity() {
                             inventoryContext = InventoryManager.getInventoryContext()
                         )
                         binding.btnCapture.isEnabled = true
+                        lastRecipeText = binding.tvRecipes.text.toString()
                         showAlerts()
                     }
                 }
