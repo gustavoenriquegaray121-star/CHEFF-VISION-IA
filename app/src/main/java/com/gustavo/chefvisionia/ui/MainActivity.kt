@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
 
             binding.chipMexican.isChecked = true
 
-            // Truco secreto desarrollador — mantén presionado el título
+            // Truco secreto desarrollador
             binding.tvTitle.setOnLongClickListener {
                 scanCount = 0
                 getSharedPreferences("ChefPrefs", MODE_PRIVATE)
@@ -73,26 +73,29 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ))
 
-            // Botón escanear con contador
+            // Botón escanear con contador por plan
             binding.btnCapture.setOnClickListener {
                 val prefs = getSharedPreferences("ChefPrefs", MODE_PRIVATE)
                 val lastDate = prefs.getString("last_scan_date", "")
-                val currentDate = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                val currentDate = java.text.SimpleDateFormat(
+                    "yyyy-MM-dd", Locale.getDefault()).format(Date())
 
                 if (currentDate != lastDate) {
                     scanCount = 0
-                    prefs.edit().putString("last_scan_date", currentDate).putInt("scans_today", 0).apply()
+                    prefs.edit()
+                        .putString("last_scan_date", currentDate)
+                        .putInt("scans_today", 0).apply()
                 } else {
                     scanCount = prefs.getInt("scans_today", 0)
                 }
 
                 val maxScans = when (userPlan) {
                     "PREMIUM" -> 20
-                    "SUPER" -> 999
-                    else -> 3
+                    "SUPER"   -> 9999
+                    else      -> 3
                 }
 
-                if (userPlan == "GRATIS" && scanCount >= maxScans) {
+                if (scanCount >= maxScans) {
                     showSubscriptionDialog()
                 } else {
                     if (imageCapture != null) {
@@ -101,7 +104,11 @@ class MainActivity : AppCompatActivity() {
                             scanCount++
                             prefs.edit().putInt("scans_today", scanCount).apply()
                             val remaining = maxScans - scanCount
-                            Toast.makeText(this, "📸 Te quedan $remaining escaneos hoy", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                "📸 Te quedan $remaining escaneos hoy",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     } else {
                         binding.tvRecipes.text = "⚠️ Cámara no lista. Verifica permisos."
@@ -109,9 +116,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Chips bloqueados plan gratis
-            listOf(binding.chipThai, binding.chipJapanese, binding.chipIndian,
-                binding.chipMediterranean, binding.chipAmerican, binding.chipFrench).forEach { chip ->
+            // Chips bloqueados — Tailandesa, Japonesa, India, Mediterránea, Americana, Francesa = Premium
+            listOf(
+                binding.chipThai, binding.chipJapanese, binding.chipIndian,
+                binding.chipMediterranean, binding.chipAmerican, binding.chipFrench
+            ).forEach { chip ->
                 chip.setOnClickListener {
                     if (userPlan == "GRATIS") {
                         chip.isChecked = false
@@ -121,7 +130,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Gourmet — Premium
+            // Gourmet = Premium
             binding.chipGourmet.setOnClickListener {
                 if (userPlan == "GRATIS") {
                     binding.chipGourmet.isChecked = false
@@ -129,7 +138,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Fitness, Vegano, Postres — Súper Premium
+            // Fitness, Vegano, Postres = Súper Premium
             listOf(binding.chipFitness, binding.chipVegan, binding.chipDessert).forEach { chip ->
                 chip.setOnClickListener {
                     if (userPlan != "SUPER") {
@@ -144,7 +153,7 @@ class MainActivity : AppCompatActivity() {
                 showSubscriptionDialog()
             }
 
-            // Lista de compras
+            // Lista de compras con precio estimado
             binding.btnShoppingList.setOnClickListener {
                 val list = InventoryManager.getShoppingList()
                 binding.tvRecipes.text = list
@@ -176,17 +185,19 @@ class MainActivity : AppCompatActivity() {
             .setTitle("✨ ¡Desbloquea todo el sabor!")
             .setMessage(
                 "Has alcanzado el límite o intentas usar una función exclusiva.\n\n" +
-                "⭐ PREMIUM (\$699/año):\n" +
+                "⭐ PREMIUM \$699/año:\n" +
                 "• 20 escaneos diarios\n" +
                 "• Todas las cocinas internacionales\n" +
                 "• Modo Gourmet ✅\n" +
                 "• Sin anuncios\n\n" +
-                "👑 SÚPER PREMIUM (\$899/año):\n" +
+                "👑 SÚPER PREMIUM \$899/año:\n" +
                 "• Escaneos ILIMITADOS\n" +
                 "• Modo Fitness con calorías 💪\n" +
-                "• Postres, Vegano y Maridajes 🍷\n" +
-                "• Lista de compras por WhatsApp\n" +
-                "• Alertas inteligentes de despensa"
+                "• Postres y Vegano 🎂🥗\n" +
+                "• Maridaje con vinos 🍷\n" +
+                "• Lista de compras con precios estimados\n" +
+                "• Alertas inteligentes de despensa\n" +
+                "• Memoria de ingredientes favoritos"
             )
             .setPositiveButton("👑 SÚPER PREMIUM") { _, _ ->
                 Toast.makeText(this, "🚀 Próximamente disponible", Toast.LENGTH_SHORT).show()
@@ -194,7 +205,9 @@ class MainActivity : AppCompatActivity() {
             .setNeutralButton("⭐ PREMIUM") { _, _ ->
                 Toast.makeText(this, "🚀 Próximamente disponible", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Luego") { dialog, _ -> dialog.dismiss() }
+            .setNegativeButton("Luego") { dialog, _ ->
+                dialog.dismiss()
+            }
             .show()
     }
 
@@ -207,7 +220,9 @@ class MainActivity : AppCompatActivity() {
             } else {
                 binding.tvAlerts.visibility = View.GONE
             }
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun fetchLocation() {
@@ -218,12 +233,17 @@ class MainActivity : AppCompatActivity() {
                     loc?.let {
                         try {
                             val geocoder = Geocoder(this, Locale.getDefault())
-                            country = geocoder.getFromLocation(it.latitude, it.longitude, 1)
-                                ?.get(0)?.countryName ?: "México"
-                        } catch (e: Exception) { country = "México" }
+                            country = geocoder.getFromLocation(
+                                it.latitude, it.longitude, 1
+                            )?.get(0)?.countryName ?: "México"
+                        } catch (e: Exception) {
+                            country = "México"
+                        }
                     }
                 }
-        } catch (e: Exception) { country = "México" }
+        } catch (e: Exception) {
+            country = "México"
+        }
     }
 
     private fun startCamera() {
@@ -240,7 +260,10 @@ class MainActivity : AppCompatActivity() {
                         .build()
                     cameraProvider.unbindAll()
                     cameraProvider.bindToLifecycle(
-                        this, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture!!
+                        this,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        imageCapture!!
                     )
                 } catch (e: Exception) {
                     binding.tvRecipes.text = "❌ Error cámara: ${e.message}"
@@ -255,6 +278,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnCapture.isEnabled = false
         binding.tvRecipes.text = "🔍 Analizando ingredientes con IA..."
         val file = File(externalCacheDir, "chef_scan.jpg")
+
         imageCapture?.takePicture(
             ImageCapture.OutputFileOptions.Builder(file).build(),
             ContextCompat.getMainExecutor(this),
