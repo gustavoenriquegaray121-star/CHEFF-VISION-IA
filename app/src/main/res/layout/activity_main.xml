@@ -1,108 +1,115 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0D1F0D">
-
-    <ImageView
-        android:id="@+id/imgLogo"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:layout_marginTop="12dp"
-        android:src="@mipmap/ic_launcher"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+    android:orientation="vertical"
+    android:background="#0D1F0D"
+    android:padding="16dp">
 
     <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Chef Vision IA"
         android:textColor="#FFD700"
-        android:textSize="22sp"
+        android:textSize="24sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/imgLogo"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:gravity="center"
+        android:paddingTop="16dp"/>
 
     <TextView
-        android:id="@+id/tvCertified"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="💎 v.25 Certified by Altea-Garay"
         android:textColor="#4FC3F7"
         android:textSize="11sp"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:gravity="center"
+        android:paddingBottom="8dp"/>
 
     <TextView
         android:id="@+id/tvAlerts"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
         android:background="#1A3A1A"
         android:padding="10dp"
         android:textColor="#FF8F00"
         android:textSize="12sp"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/tvCertified" />
+        android:visibility="gone"/>
 
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintHeight_percent="0.25"
-        app:layout_constraintTop_toBottomOf="@id/tvAlerts" />
+        android:layout_height="200dp"
+        android:layout_marginTop="8dp"/>
 
     <HorizontalScrollView
-        android:id="@+id/scrollCocinas"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:scrollbars="none"
-        app:layout_constraintTop_toBottomOf="@id/previewView">
+        android:scrollbars="none">
 
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/chipsCuisine"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            app:singleSelection="true">
+            app:singleSelection="true"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
 
-            <com.google.android.material.chip.Chip android:id="@+id/chipMexican"
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipMexican"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇲🇽 Mexicana" android:checked="true" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipItalian"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇲🇽 Mexicana"
+                android:checked="true"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipItalian"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇮🇹 Italiana" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipChinese"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇮🇹 Italiana"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipChinese"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇨🇳 China" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipThai"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇨🇳 China"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipThai"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇹🇭 Tailandesa" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipJapanese"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇹🇭 Tailandesa"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipJapanese"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇯🇵 Japonesa" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipIndian"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇯🇵 Japonesa"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipIndian"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇮🇳 India" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipMediterranean"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇮🇳 India"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipMediterranean"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇬🇷 Mediterránea" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipAmerican"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇬🇷 Mediterránea"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipAmerican"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇺🇸 Americana" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipFrench"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇺🇸 Americana"/>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFrench"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="🇫🇷 Francesa" />
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🇫🇷 Francesa"/>
 
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
@@ -111,50 +118,44 @@
         android:id="@+id/chipGourmet"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
         android:layout_marginTop="4dp"
-        android:text="⭐ Modo Gourmet"
-        app:layout_constraintTop_toBottomOf="@id/scrollCocinas"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:text="⭐ Modo Gourmet"/>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCapture"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="4dp"
-        android:text="📸 ESCANEAR"
-        android:backgroundTint="#FFD700"
-        android:textColor="#000000"
-        android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/chipGourmet"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btnShoppingList" />
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnShoppingList"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="16dp"
-        android:text="🛒 LISTA"
-        android:backgroundTint="#2E7D32"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/chipGourmet"
-        app:layout_constraintStart_toEndOf="@id/btnCapture"
-        app:layout_constraintEnd_toEndOf="parent" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCapture"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="📸 ESCANEAR"
+            android:backgroundTint="#FFD700"
+            android:textColor="#000000"
+            android:textStyle="bold"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnShoppingList"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="🛒 LISTA"
+            android:backgroundTint="#2E7D32"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"/>
+
+    </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintTop_toBottomOf="@id/btnCapture"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:layout_weight="1"
+        android:layout_marginTop="8dp">
 
         <TextView
             android:id="@+id/tvRecipes"
@@ -163,9 +164,9 @@
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:lineSpacingExtra="4dp"
-            android:hint="Los ingredientes detectados y recetas aparecerán aquí..."
-            android:textColorHint="#557755" />
+            android:hint="Los ingredientes y recetas aparecerán aquí..."
+            android:textColorHint="#557755"/>
 
     </ScrollView>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>
