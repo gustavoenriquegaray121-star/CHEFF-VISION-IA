@@ -22,68 +22,87 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var imageCapture: ImageCapture
+    private var imageCapture: ImageCapture? = null
     private var country: String = "México"
+    private var cameraStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
-        InventoryManager.load(this)
-        showAlerts()
+        try {
+            binding = ActivityMainBinding.inflate(layoutInflater)
+            setContentView(binding.root)
 
-        GeminiAnalyticEngine.onIngredientsDetected = { ingredients ->
-            if (ingredients.isNotEmpty()) {
-                InventoryManager.update(this, ingredients)
-                showAlerts()
+            InventoryManager.load(this)
+            showAlerts()
+
+            GeminiAnalyticEngine.onIngredientsDetected = { ingredients ->
+                if (ingredients.isNotEmpty()) {
+                    InventoryManager.update(this, ingredients)
+                    showAlerts()
+                }
             }
-        }
 
-        binding.chipMexican.isChecked = true
+            binding.chipMexican.isChecked = true
 
-        val launcher = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { permissions ->
-            if (permissions[Manifest.permission.CAMERA] == true) startCamera()
-            if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) fetchLocation()
-        }
+            val launcher = registerForActivityResult(
+                ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                if (permissions[Manifest.permission.CAMERA] == true) {
+                    startCamera()
+                }
+                if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+                    fetchLocation()
+                }
+            }
 
-        launcher.launch(
-            arrayOf(
-                Manifest.permission.CAMERA,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
+            launcher.launch(
+                arrayOf(
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
             )
-        )
 
-        binding.btnCapture.setOnClickListener { takePhoto() }
-
-        binding.btnShoppingList.setOnClickListener {
-            val list = InventoryManager.getShoppingList()
-            binding.tvRecipes.text = list
-
-            // Compartir por WhatsApp
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, list)
-                setPackage("com.whatsapp")
+            binding.btnCapture.setOnClickListener {
+                if (imageCapture != null) {
+                    takePhoto()
+                } else {
+                    binding.tvRecipes.text = "⚠️ Cámara no lista. Verifica permisos."
+                }
             }
-            try {
-                startActivity(intent)
-            } catch (e: Exception) {
-                // WhatsApp no instalado — solo muestra en pantalla
+
+            binding.btnShoppingList.setOnClickListener {
+                val list = InventoryManager.getShoppingList()
+                binding.tvRecipes.text = list
+                try {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, list)
+                        setPackage("com.whatsapp")
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // WhatsApp no instalado
+                }
             }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
     private fun showAlerts() {
-        val alerts = InventoryManager.getAlerts()
-        if (alerts.isNotEmpty()) {
-            binding.tvAlerts.visibility = View.VISIBLE
-            binding.tvAlerts.text = alerts
-        } else {
-            binding.tvAlerts.visibility = View.GONE
+        try {
+            val alerts = InventoryManager.getAlerts()
+            if (alerts.isNotEmpty()) {
+                binding.tvAlerts.visibility = View.VISIBLE
+                binding.tvAlerts.text = alerts
+            } else {
+                binding.tvAlerts.visibility = View.GONE
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -93,40 +112,49 @@ class MainActivity : AppCompatActivity() {
                 .lastLocation
                 .addOnSuccessListener { loc ->
                     loc?.let {
-                        val geocoder = Geocoder(this, Locale.getDefault())
-                        val addresses = geocoder.getFromLocation(
-                            it.latitude, it.longitude, 1
-                        )
-                        country = addresses?.get(0)?.countryName ?: "México"
+                        try {
+                            val geocoder = Geocoder(this, Locale.getDefault())
+                            val addresses = geocoder.getFromLocation(
+                                it.latitude, it.longitude, 1
+                            )
+                            country = addresses?.get(0)?.countryName ?: "México"
+                        } catch (e: Exception) {
+                            country = "México"
+                        }
                     }
                 }
-        } catch (e: SecurityException) {
+        } catch (e: Exception) {
             country = "México"
         }
     }
 
     private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(binding.previewView.surfaceProvider)
-            }
-            imageCapture = ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .build()
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    this,
-                    CameraSelector.DEFAULT_BACK_CAMERA,
-                    preview,
-                    imageCapture
-                )
-            } catch (e: Exception) {
-                binding.tvRecipes.text = "❌ Error iniciando cámara: ${e.message}"
-            }
-        }, ContextCompat.getMainExecutor(this))
+        try {
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+            cameraProviderFuture.addListener({
+                try {
+                    val cameraProvider = cameraProviderFuture.get()
+                    val preview = Preview.Builder().build().also {
+                        it.setSurfaceProvider(binding.previewView.surfaceProvider)
+                    }
+                    imageCapture = ImageCapture.Builder()
+                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .build()
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(
+                        this,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        imageCapture!!
+                    )
+                    cameraStarted = true
+                } catch (e: Exception) {
+                    binding.tvRecipes.text = "❌ Error cámara: ${e.message}"
+                }
+            }, ContextCompat.getMainExecutor(this))
+        } catch (e: Exception) {
+            binding.tvRecipes.text = "❌ Error iniciando cámara: ${e.message}"
+        }
     }
 
     private fun takePhoto() {
@@ -136,14 +164,13 @@ class MainActivity : AppCompatActivity() {
         val file = File(externalCacheDir, "chef_scan.jpg")
         val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
 
-        imageCapture.takePicture(
+        imageCapture?.takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(result: ImageCapture.OutputFileResults) {
                     val cuisine = getCuisineSelected()
                     val inventoryContext = InventoryManager.getInventoryContext()
-
                     lifecycleScope.launch {
                         GeminiAnalyticEngine.analyze(
                             path = file.absolutePath,
@@ -157,9 +184,8 @@ class MainActivity : AppCompatActivity() {
                         showAlerts()
                     }
                 }
-
                 override fun onError(exception: ImageCaptureException) {
-                    binding.tvRecipes.text = "❌ Error al capturar: ${exception.message}"
+                    binding.tvRecipes.text = "❌ Error: ${exception.message}"
                     binding.btnCapture.isEnabled = true
                 }
             }
