@@ -130,8 +130,8 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                     }))
                 }
 
-                // URL ESTABLE 2026 (v1 + Flash)
-                val url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey"
+                // URL CORREGIDA CON v1beta PARA QUITAR EL ERROR 404
+                val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
 
                 var responseText = ""
                 var success = false
