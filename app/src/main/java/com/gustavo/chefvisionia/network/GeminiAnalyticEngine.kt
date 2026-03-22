@@ -13,25 +13,26 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.*
 
 object GeminiAnalyticEngine {
 
-    var apiKey: String = BuildConfig.GEMINI_API_KEY
+    // 🔐 Si el BuildConfig falla, aquí puedes pegar tu llave temporalmente para pruebas rápidas
+    var apiKey: String = BuildConfig.GEMINI_API_KEY 
 
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
+    
+    // Callback nuevo para el Semáforo de Frescura y Negocio
+    var onInventoryDataReady: ((JSONArray) -> Unit)? = null
 
     private val isDeveloperMode = true
 
     private val isDemoMode: Boolean
         get() = apiKey.isEmpty() && !isDeveloperMode
 
-    fun hasPremiumAccess(userHasPaid: Boolean): Boolean {
-        return userHasPaid || isDeveloperMode
-    }
-
-    fun hasSuperPremiumAccess(userHasPaid: Boolean): Boolean {
-        return userHasPaid || isDeveloperMode
-    }
+    fun hasPremiumAccess(userHasPaid: Boolean): Boolean = userHasPaid || isDeveloperMode
+    fun hasSuperPremiumAccess(userHasPaid: Boolean): Boolean = userHasPaid || isDeveloperMode
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val outputStream = ByteArrayOutputStream()
@@ -39,44 +40,24 @@ object GeminiAnalyticEngine {
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 
-    private fun generarRespuestaDemo(
-        cuisine: String,
-        gourmet: Boolean,
-        fitness: Boolean,
-        dessert: Boolean
-    ): String {
-
+    private fun generarRespuestaDemo(cuisine: String, gourmet: Boolean, fitness: Boolean, dessert: Boolean): String {
         val extra = when {
             fitness -> "\n💪 Incluye macros y enfoque proteico."
             dessert -> "\n🍰 Incluye sugerencia de postre."
             gourmet -> "\n🍷 Incluye maridaje profesional."
             else -> ""
         }
-
         return """
-⚡ MODO DEMO ACTIVO
-
-Estamos optimizando la conexión con el motor IA.
+⚡ MODO DEMO ACTIVO (Sin conexión)
 
 🍳 INGREDIENTES DETECTADOS:
-- tomate
-- cebolla
-- ajo
-- pollo
+- tomate (🔴 ¡Úsame hoy!)
+- cebolla (🟢 Fresco)
+- pollo (🟡 Consumir pronto)
 
-🍽️ RECETAS ($cuisine):
-1. 🍗 Pollo al ajo con tomate
-   ⏱️ 25 min
-   🧂 Ingredientes: pollo, ajo, tomate, aceite
-   👨‍🍳 Preparación: sofríe ajo, agrega pollo, cocina con tomate
-   💡 Tip: usa fuego medio para mejor sabor
-
-2. 🥗 Ensalada fresca casera
-3. 🍳 Omelette sencillo
-
+🍽️ RECETAS SUGERIDAS ($cuisine):
+1. 🍗 Pollo al ajo con tomate (Prioridad: Desperdicio Cero)
 $extra
-
-💡 Tip: Mejora iluminación y enfoque para resultados reales.
         """.trimIndent()
     }
 
@@ -93,7 +74,6 @@ $extra
     ) {
         withContext(Dispatchers.IO) {
             try {
-
                 if (isDemoMode) {
                     withContext(Dispatchers.Main) {
                         output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
@@ -102,189 +82,109 @@ $extra
                     return@withContext
                 }
 
-                if (apiKey.isEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        output.text = "❌ API KEY VACÍA"
-                    }
-                    return@withContext
-                }
-
-                val bitmap = BitmapFactory.decodeFile(path)
-                if (bitmap == null) {
-                    withContext(Dispatchers.Main) {
-                        output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
-                    }
+                val bitmap = BitmapFactory.decodeFile(path) ?: run {
+                    withContext(Dispatchers.Main) { output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert) }
                     return@withContext
                 }
 
                 val base64Image = bitmapToBase64(bitmap)
-
-                val modeText = when {
-                    fitness -> "fitness con macros y alto contenido proteico"
-                    vegan   -> "100% vegana"
-                    dessert -> "postres creativos"
-                    gourmet -> "gourmet de alta cocina"
-                    else    -> "casera"
-                }
-
-                val fitnessExtra = if (fitness)
-                    "\nIncluye calorías, proteínas, carbohidratos y grasas."
-                else ""
-
-                val wineExtra = if (gourmet)
-                    "\nIncluye maridaje profesional."
-                else ""
-
-                val dessertExtra = if (dessert)
-                    "\nSugiere un postre que combine perfectamente."
-                else ""
-
-                val inventoryNote = if (inventoryContext.isNotEmpty())
-                    "\nIngredientes disponibles: $inventoryContext."
-                else ""
+                val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
 
                 val promptText = """
-Eres Chef Vision IA 🍳
+Eres Chef Vision IA 🍳. Tu misión es ser un asistente proactivo de cocina y negocio.
 
-REGLAS:
-- SOLO ingredientes visibles
-- NO inventar
-- Sé preciso
+REGLAS DE ANALISIS:
+1. SOLO ingredientes visibles.
+2. Calcula 'shelf_life' (días de vida restante estimados).
+3. Si el inventario ($inventoryContext) tiene productos viejos, PRIORIZA recetas para usarlos (Desperdicio Cero).
 
-1. INGREDIENTES DETECTADOS
+ESTRUCTURA DE RESPUESTA (Responde en este orden):
 
-2. 3 RECETAS ($cuisine - $country, estilo $modeText):
-- Nombre
-- Tiempo
-- Ingredientes
-- Pasos
-- Tip
-$fitnessExtra
-$wineExtra
-$dessertExtra
+1. INGREDIENTES DETECTADOS:
+(Lista con nombre y estado de frescura)
 
-3. RECETA LOCAL
+2. 3 RECETAS ($cuisine - $country):
+(Nombre, Tiempo, Macros si es fitness, Maridaje si es gourmet, Postre si aplica)
 
-$inventoryNote
+3. DATOS DE INVENTARIO (ESTRICTO JSON AL FINAL):
+Genera un JSON con esta estructura para mi base de datos:
+[{"ingrediente": "nombre", "shelf_life": dias, "timestamp": "$timestamp", "color": "rojo/amarillo/verde"}]
 
-Responde en español profesional y atractivo.
+4. SUGERENCIA DE COMPRA (SORIANA):
+Si falta algo básico para las recetas, menciónalo como oferta.
                 """.trimIndent()
 
                 val requestBody = JSONObject().apply {
-                    put("contents", JSONArray().put(
-                        JSONObject().apply {
-                            put("parts", JSONArray().apply {
-                                put(JSONObject().apply { put("text", promptText) })
-                                put(JSONObject().apply {
-                                    put("inline_data", JSONObject().apply {
-                                        put("mime_type", "image/jpeg")
-                                        put("data", base64Image)
-                                    })
+                    put("contents", JSONArray().put(JSONObject().apply {
+                        put("parts", JSONArray().apply {
+                            put(JSONObject().apply { put("text", promptText) })
+                            put(JSONObject().apply {
+                                put("inline_data", JSONObject().apply {
+                                    put("mime_type", "image/jpeg")
+                                    put("data", base64Image)
                                 })
                             })
-                        }
-                    ))
+                        })
+                    }))
                 }
 
-                // 🔥 ENDPOINTS CON FALLBACK AUTOMÁTICO
                 val endpoints = listOf(
                     "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey",
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
                 )
 
-                var responseCode = -1
                 var responseText = ""
                 var success = false
 
                 for (endpoint in endpoints) {
                     try {
-                        val url = URL(endpoint)
-                        val connection = url.openConnection() as HttpURLConnection
-
-                        connection.requestMethod = "POST"
-                        connection.setRequestProperty("Content-Type", "application/json")
-                        connection.connectTimeout = 15000
-                        connection.readTimeout = 15000
-                        connection.doOutput = true
-
-                        OutputStreamWriter(connection.outputStream).use {
-                            it.write(requestBody.toString())
+                        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                            requestMethod = "POST"
+                            setRequestProperty("Content-Type", "application/json")
+                            connectTimeout = 15000
+                            readTimeout = 15000
+                            doOutput = true
                         }
-
-                        responseCode = connection.responseCode
-
-                        responseText = if (responseCode in 200..299) {
-                            connection.inputStream.bufferedReader().readText()
-                        } else {
-                            connection.errorStream?.bufferedReader()?.readText() ?: ""
-                        }
-
-                        if (responseCode in 200..299) {
+                        OutputStreamWriter(connection.outputStream).use { it.write(requestBody.toString()) }
+                        
+                        if (connection.responseCode in 200..299) {
+                            responseText = connection.inputStream.bufferedReader().readText()
                             success = true
                             break
+                        } else {
+                            responseText = connection.errorStream?.bufferedReader()?.readText() ?: ""
                         }
-
-                    } catch (_: Exception) {
-                    }
+                    } catch (e: Exception) { continue }
                 }
 
                 val resultText = if (success) {
-                    try {
-                        val json = JSONObject(responseText)
-
-                        val parts = json.getJSONArray("candidates")
-                            .getJSONObject(0)
-                            .getJSONObject("content")
-                            .getJSONArray("parts")
-
-                        val builder = StringBuilder()
-
-                        for (i in 0 until parts.length()) {
-                            val part = parts.getJSONObject(i)
-                            if (part.has("text")) {
-                                builder.append(part.getString("text"))
-                            }
-                        }
-
-                        builder.toString()
-
-                    } catch (e: Exception) {
-                        if (isDeveloperMode)
-                            "❌ ERROR PARSEO:\n${e.message}\n$responseText"
-                        else
-                            generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                    val json = JSONObject(responseText)
+                    val builder = StringBuilder()
+                    val parts = json.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
+                    for (i in 0 until parts.length()) {
+                        builder.append(parts.getJSONObject(i).getString("text"))
                     }
+                    builder.toString()
                 } else {
-                    if (isDeveloperMode)
-                        "❌ ERROR TOTAL:\n$responseText"
-                    else
-                        generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                    if (isDeveloperMode) "❌ ERROR TOTAL:\n$responseText" else generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
 
-                val ingredientLines = resultText
-                    .substringAfter("INGREDIENTES DETECTADOS", "")
-                    .substringBefore("RECETAS", "")
-                    .lines()
-                    .filter { it.trim().startsWith("-") || it.trim().startsWith("•") }
-                    .map {
-                        it.replace("-", "")
-                            .replace("•", "")
-                            .trim()
-                            .lowercase()
-                    }
-                    .filter { it.isNotEmpty() }
+                // Extracción de datos para el Semáforo y Lista de Mandado
+                val inventoryJsonStr = resultText.substringAfter("[", "").substringBeforeLast("]", "")
+                if (inventoryJsonStr.isNotEmpty()) {
+                    try {
+                        val jsonArr = JSONArray("[" + inventoryJsonStr + "]")
+                        withContext(Dispatchers.Main) { onInventoryDataReady?.invoke(jsonArr) }
+                    } catch (e: Exception) {}
+                }
 
                 withContext(Dispatchers.Main) {
                     output.text = resultText
-                    onIngredientsDetected?.invoke(ingredientLines)
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    if (isDeveloperMode)
-                        output.text = "❌ ERROR CRÍTICO:\n${e.message}"
-                    else
-                        output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                    output.text = if (isDeveloperMode) "❌ ERROR CRÍTICO:\n${e.message}" else generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
             }
         }
