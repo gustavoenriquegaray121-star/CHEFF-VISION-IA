@@ -110,7 +110,7 @@ object GeminiAnalyticEngine {
                     ))
                 }
 
-                // ✅ LÍNEA CORREGIDA AQUÍ
+                // ✅ CORRECCIÓN: Usamos v1beta y gemini-1.5-flash sin extras
                 val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
 
                 val connection = url.openConnection() as HttpURLConnection
