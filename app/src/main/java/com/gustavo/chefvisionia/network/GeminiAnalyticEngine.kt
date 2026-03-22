@@ -37,9 +37,19 @@ object GeminiAnalyticEngine {
     ) {
         withContext(Dispatchers.IO) {
             try {
+
+                if (apiKey.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        output.text = "❌ API Key no configurada."
+                    }
+                    return@withContext
+                }
+
                 val bitmap = BitmapFactory.decodeFile(path)
                 if (bitmap == null) {
-                    withContext(Dispatchers.Main) { output.text = "❌ Error: No se pudo procesar la imagen." }
+                    withContext(Dispatchers.Main) {
+                        output.text = "❌ No se pudo procesar la imagen."
+                    }
                     return@withContext
                 }
 
@@ -53,41 +63,45 @@ object GeminiAnalyticEngine {
                     else    -> "casera, fácil y económica"
                 }
 
-                val fitnessExtra = if (fitness) "\nPara cada receta incluye: calorías aproximadas, gramos de proteína, carbohidratos y grasas." else ""
-                val wineExtra = if (gourmet) "\nPara cada receta sugiere un vino o bebida que combine perfecto." else ""
-                val inventoryNote = if (inventoryContext.isNotEmpty()) "\n\nIngredientes en despensa (con días desde compra): $inventoryContext. Prioriza los más antiguos." else ""
+                val fitnessExtra = if (fitness)
+                    "\nIncluye calorías, proteínas, carbohidratos y grasas."
+                else ""
+
+                val wineExtra = if (gourmet)
+                    "\nSugiere un vino o bebida ideal."
+                else ""
+
+                val inventoryNote = if (inventoryContext.isNotEmpty())
+                    "\nIngredientes disponibles: $inventoryContext. Prioriza los más antiguos."
+                else ""
 
                 val promptText = """
-                    Eres Chef Vision IA, el asistente culinario más inteligente del mundo.
-                    
-                    Analiza los ingredientes visibles en esta imagen y haz lo siguiente:
-                    
-                    1. 📦 INGREDIENTES DETECTADOS: Lista todos los ingredientes que ves.
-                    
-                    2. 🍽️ 3 RECETAS SUGERIDAS (cocina $cuisine de $country, estilo $modeText):
-                       - Nombre del platillo
-                       - Tiempo de preparación
-                       - Ingredientes necesarios
-                       - Pasos resumidos
-                       - Tip del chef
-                       $fitnessExtra
-                       $wineExtra
-                    
-                    3. 🌍 TOQUE LOCAL: Una receta especial típica de $country con estos ingredientes.
-                    
-                    $inventoryNote
-                    
-                    Responde en español, claro, motivador y apetitosa. Usa emojis.
+Eres Chef Vision IA 🍳
+
+1. INGREDIENTES DETECTADOS:
+Lista clara de ingredientes.
+
+2. 3 RECETAS ($cuisine - $country, estilo $modeText):
+- Nombre
+- Tiempo
+- Ingredientes
+- Pasos
+- Tip del chef
+$fitnessExtra
+$wineExtra
+
+3. RECETA LOCAL
+
+$inventoryNote
+
+Responde en español con emojis.
                 """.trimIndent()
 
-                // ✅ ESTRUCTURA OFICIAL CORRECTA (texto primero, imagen después)
                 val requestBody = JSONObject().apply {
                     put("contents", JSONArray().put(
                         JSONObject().apply {
                             put("parts", JSONArray().apply {
-                                // Primero el texto
                                 put(JSONObject().apply { put("text", promptText) })
-                                // Después la imagen
                                 put(JSONObject().apply {
                                     put("inline_data", JSONObject().apply {
                                         put("mime_type", "image/jpeg")
@@ -99,60 +113,83 @@ object GeminiAnalyticEngine {
                     ))
                 }
 
-                // ✅ MODELO QUE FUNCIONA HOY (22 marzo 2026)
-                val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
+                // ✅ ENDPOINT CORREGIDO
+                val url = URL(
+                    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey"
+                )
 
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.doOutput = true
-                connection.connectTimeout = 30000
-                connection.readTimeout = 30000
 
-                OutputStreamWriter(connection.outputStream).use { writer ->
-                    writer.write(requestBody.toString())
-                    writer.flush()
+                OutputStreamWriter(connection.outputStream).use {
+                    it.write(requestBody.toString())
                 }
 
                 val responseCode = connection.responseCode
-                val responseText = if (responseCode == 200) {
+
+                val responseText = if (responseCode in 200..299) {
                     connection.inputStream.bufferedReader().readText()
                 } else {
-                    connection.errorStream?.bufferedReader()?.readText() ?: "Error $responseCode"
+                    connection.errorStream?.bufferedReader()?.readText()
+                        ?: "Error $responseCode"
                 }
 
-                val result = if (responseCode == 200) {
+                val resultText = if (responseCode in 200..299) {
                     try {
                         val json = JSONObject(responseText)
-                        json.getJSONArray("candidates")
-                            .getJSONObject(0)
-                            .getJSONObject("content")
-                            .getJSONArray("parts")
-                            .getJSONObject(0)
-                            .getString("text")
+
+                        // 🔥 VALIDAR ERROR API
+                        if (json.has("error")) {
+                            "❌ API Error: ${json.getJSONObject("error")}"
+                        } else {
+
+                            val parts = json.getJSONArray("candidates")
+                                .getJSONObject(0)
+                                .getJSONObject("content")
+                                .getJSONArray("parts")
+
+                            val builder = StringBuilder()
+
+                            for (i in 0 until parts.length()) {
+                                val part = parts.getJSONObject(i)
+                                if (part.has("text")) {
+                                    builder.append(part.getString("text"))
+                                }
+                            }
+
+                            builder.toString()
+                        }
+
                     } catch (e: Exception) {
-                        "❌ Error procesando respuesta: ${e.message}"
+                        "❌ Error parseando respuesta: ${e.message}"
                     }
                 } else {
-                    "❌ Error $responseCode: $responseText"
+                    "❌ Error $responseCode:\n$responseText"
                 }
 
-                val ingredientLines = result
+                val ingredientLines = resultText
                     .substringAfter("INGREDIENTES DETECTADOS", "")
                     .substringBefore("RECETAS", "")
                     .lines()
                     .filter { it.trim().startsWith("-") || it.trim().startsWith("•") }
-                    .map { it.replace("-", "").replace("•", "").trim().lowercase() }
+                    .map {
+                        it.replace("-", "")
+                            .replace("•", "")
+                            .trim()
+                            .lowercase()
+                    }
                     .filter { it.isNotEmpty() }
 
                 withContext(Dispatchers.Main) {
-                    output.text = result
+                    output.text = resultText
                     onIngredientsDetected?.invoke(ingredientLines)
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    output.text = "❌ Error: ${e.message}"
+                    output.text = "❌ Error general: ${e.message}"
                 }
             }
         }
