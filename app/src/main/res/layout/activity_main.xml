@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -8,6 +9,7 @@
     android:padding="16dp">
 
     <TextView
+        android:id="@+id/tvTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Chef Vision IA"
@@ -22,6 +24,16 @@
         android:layout_height="wrap_content"
         android:text="💎 v.25 Certified by Altea-Garay"
         android:textColor="#4FC3F7"
+        android:textSize="11sp"
+        android:gravity="center"
+        android:paddingBottom="4dp"/>
+
+    <TextView
+        android:id="@+id/tvPlan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🆓 Plan Gratuito — 3 escaneos/día"
+        android:textColor="#888888"
         android:textSize="11sp"
         android:gravity="center"
         android:paddingBottom="8dp"/>
@@ -40,7 +52,8 @@
         android:id="@+id/previewView"
         android:layout_width="match_parent"
         android:layout_height="200dp"
-        android:layout_marginTop="8dp"/>
+        android:layout_marginTop="8dp"
+        android:background="#000000"/>
 
     <HorizontalScrollView
         android:layout_width="match_parent"
@@ -52,8 +65,7 @@
             android:id="@+id/chipsCuisine"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:singleSelection="true"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+            app:singleSelection="true">
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipMexican"
@@ -62,64 +74,100 @@
                 android:layout_height="wrap_content"
                 android:text="🇲🇽 Mexicana"
                 android:checked="true"/>
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipItalian"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🇮🇹 Italiana"/>
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipChinese"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🇨🇳 China"/>
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipThai"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🇹🇭 Tailandesa"/>
+                android:text="🇹🇭 Tailandesa 🔒"/>
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipJapanese"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🇯🇵 Japonesa"/>
+                android:text="🇯🇵 Japonesa 🔒"/>
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipIndian"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🇮🇳 India"/>
+                android:text="🇮🇳 India 🔒"/>
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipMediterranean"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🇬🇷 Mediterránea"/>
+                android:text="🇬🇷 Mediterránea 🔒"/>
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipAmerican"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🇺🇸 Americana"/>
+                android:text="🇺🇸 Americana 🔒"/>
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipFrench"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🇫🇷 Francesa"/>
+                android:text="🇫🇷 Francesa 🔒"/>
 
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/chipGourmet"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="⭐ Modo Gourmet"/>
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipGourmet"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⭐ Gourmet 🔒"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFitness"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="💪 Fitness 👑"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipVegan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="🥗 Vegano 👑"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipDessert"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="🎂 Postres 👑"/>
+
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -150,6 +198,16 @@
             android:textStyle="bold"/>
 
     </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUpgrade"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="👑 HAZTE PREMIUM — DESBLOQUEA TODO"
+        android:backgroundTint="#B8860B"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"/>
 
     <ScrollView
         android:layout_width="match_parent"
