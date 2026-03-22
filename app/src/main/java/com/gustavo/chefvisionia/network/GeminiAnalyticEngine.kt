@@ -39,9 +39,7 @@ object GeminiAnalyticEngine {
             try {
                 val bitmap = BitmapFactory.decodeFile(path)
                 if (bitmap == null) {
-                    withContext(Dispatchers.Main) {
-                        output.text = "❌ Error: No se pudo procesar la imagen."
-                    }
+                    withContext(Dispatchers.Main) { output.text = "❌ Error: No se pudo procesar la imagen." }
                     return@withContext
                 }
 
@@ -55,17 +53,9 @@ object GeminiAnalyticEngine {
                     else    -> "casera, fácil y económica"
                 }
 
-                val fitnessExtra = if (fitness)
-                    "\nPara cada receta incluye: calorías aproximadas, gramos de proteína, carbohidratos y grasas."
-                else ""
-
-                val wineExtra = if (gourmet)
-                    "\nPara cada receta sugiere un vino o bebida que combine perfecto."
-                else ""
-
-                val inventoryNote = if (inventoryContext.isNotEmpty())
-                    "\n\nIngredientes en despensa (con días desde compra): $inventoryContext. Prioriza los más antiguos."
-                else ""
+                val fitnessExtra = if (fitness) "\nPara cada receta incluye: calorías aproximadas, gramos de proteína, carbohidratos y grasas." else ""
+                val wineExtra = if (gourmet) "\nPara cada receta sugiere un vino o bebida que combine perfecto." else ""
+                val inventoryNote = if (inventoryContext.isNotEmpty()) "\n\nIngredientes en despensa (con días desde compra): $inventoryContext. Prioriza los más antiguos." else ""
 
                 val promptText = """
                     Eres Chef Vision IA, el asistente culinario más inteligente del mundo.
@@ -75,7 +65,6 @@ object GeminiAnalyticEngine {
                     1. 📦 INGREDIENTES DETECTADOS: Lista todos los ingredientes que ves.
                     
                     2. 🍽️ 3 RECETAS SUGERIDAS (cocina $cuisine de $country, estilo $modeText):
-                       Para cada receta incluye:
                        - Nombre del platillo
                        - Tiempo de preparación
                        - Ingredientes necesarios
@@ -88,30 +77,30 @@ object GeminiAnalyticEngine {
                     
                     $inventoryNote
                     
-                    Responde en español, de forma clara, motivadora y apetitosa.
-                    Usa emojis para hacerlo visual y divertido.
+                    Responde en español, claro, motivador y apetitosa. Usa emojis.
                 """.trimIndent()
 
+                // ✅ ESTRUCTURA OFICIAL CORRECTA (texto primero, imagen después)
                 val requestBody = JSONObject().apply {
                     put("contents", JSONArray().put(
                         JSONObject().apply {
                             put("parts", JSONArray().apply {
+                                // Primero el texto
+                                put(JSONObject().apply { put("text", promptText) })
+                                // Después la imagen
                                 put(JSONObject().apply {
                                     put("inline_data", JSONObject().apply {
                                         put("mime_type", "image/jpeg")
                                         put("data", base64Image)
                                     })
                                 })
-                                put(JSONObject().apply {
-                                    put("text", promptText)
-                                })
                             })
                         }
                     ))
                 }
 
-                // CORRECCIÓN FINAL: Usamos el modelo que Google acepta hoy
-                val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key=$apiKey")
+                // ✅ MODELO QUE FUNCIONA HOY (22 marzo 2026)
+                val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
 
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
