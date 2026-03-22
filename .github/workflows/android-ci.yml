@@ -57,6 +57,8 @@ jobs:
           -dname "CN=Gustavo Garay, OU=Altea-Garay, O=Altea-Garay, L=Garcia, S=NuevoLeon, C=MX"
 
     - name: Build Release APK
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: ./gradlew assembleRelease
 
     - name: Sign APK
