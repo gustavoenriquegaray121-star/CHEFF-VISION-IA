@@ -16,15 +16,12 @@ import java.net.URL
 
 object GeminiAnalyticEngine {
 
-    // 🔐 API KEY DESDE BUILD
     var apiKey: String = BuildConfig.GEMINI_API_KEY
 
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
 
-    // 🔥 LLAVE MAESTRA
     private val isDeveloperMode = true
 
-    // 🔥 DEMO SOLO SI NO HAY API Y NO ERES DEV
     private val isDemoMode: Boolean
         get() = apiKey.isEmpty() && !isDeveloperMode
 
@@ -72,14 +69,14 @@ Estamos optimizando la conexión con el motor IA.
    ⏱️ 25 min
    🧂 Ingredientes: pollo, ajo, tomate, aceite
    👨‍🍳 Preparación: sofríe ajo, agrega pollo, cocina con tomate
-   💡 Tip: usa fuego medio
+   💡 Tip: usa fuego medio para mejor sabor
 
-2. 🥗 Ensalada fresca
+2. 🥗 Ensalada fresca casera
 3. 🍳 Omelette sencillo
 
 $extra
 
-💡 Tip: Mejora iluminación para resultados reales.
+💡 Tip: Mejora iluminación y enfoque para resultados reales.
         """.trimIndent()
     }
 
@@ -122,16 +119,55 @@ $extra
 
                 val base64Image = bitmapToBase64(bitmap)
 
+                val modeText = when {
+                    fitness -> "fitness con macros y alto contenido proteico"
+                    vegan   -> "100% vegana"
+                    dessert -> "postres creativos"
+                    gourmet -> "gourmet de alta cocina"
+                    else    -> "casera"
+                }
+
+                val fitnessExtra = if (fitness)
+                    "\nIncluye calorías, proteínas, carbohidratos y grasas."
+                else ""
+
+                val wineExtra = if (gourmet)
+                    "\nIncluye maridaje profesional."
+                else ""
+
+                val dessertExtra = if (dessert)
+                    "\nSugiere un postre que combine perfectamente."
+                else ""
+
+                val inventoryNote = if (inventoryContext.isNotEmpty())
+                    "\nIngredientes disponibles: $inventoryContext."
+                else ""
+
                 val promptText = """
 Eres Chef Vision IA 🍳
 
-Detecta ingredientes reales y genera recetas profesionales.
+REGLAS:
+- SOLO ingredientes visibles
+- NO inventar
+- Sé preciso
 
 1. INGREDIENTES DETECTADOS
-2. 3 RECETAS ($cuisine - $country)
+
+2. 3 RECETAS ($cuisine - $country, estilo $modeText):
+- Nombre
+- Tiempo
+- Ingredientes
+- Pasos
+- Tip
+$fitnessExtra
+$wineExtra
+$dessertExtra
+
 3. RECETA LOCAL
 
-Responde claro en español.
+$inventoryNote
+
+Responde en español profesional y atractivo.
                 """.trimIndent()
 
                 val requestBody = JSONObject().apply {
@@ -150,32 +186,49 @@ Responde claro en español.
                     ))
                 }
 
-                // 🔥 ENDPOINT CORRECTO
-                val url = URL(
+                // 🔥 ENDPOINTS CON FALLBACK AUTOMÁTICO
+                val endpoints = listOf(
+                    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey",
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
                 )
 
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.connectTimeout = 15000
-                connection.readTimeout = 15000
-                connection.doOutput = true
+                var responseCode = -1
+                var responseText = ""
+                var success = false
 
-                OutputStreamWriter(connection.outputStream).use {
-                    it.write(requestBody.toString())
+                for (endpoint in endpoints) {
+                    try {
+                        val url = URL(endpoint)
+                        val connection = url.openConnection() as HttpURLConnection
+
+                        connection.requestMethod = "POST"
+                        connection.setRequestProperty("Content-Type", "application/json")
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 15000
+                        connection.doOutput = true
+
+                        OutputStreamWriter(connection.outputStream).use {
+                            it.write(requestBody.toString())
+                        }
+
+                        responseCode = connection.responseCode
+
+                        responseText = if (responseCode in 200..299) {
+                            connection.inputStream.bufferedReader().readText()
+                        } else {
+                            connection.errorStream?.bufferedReader()?.readText() ?: ""
+                        }
+
+                        if (responseCode in 200..299) {
+                            success = true
+                            break
+                        }
+
+                    } catch (_: Exception) {
+                    }
                 }
 
-                val responseCode = connection.responseCode
-
-                val responseText = if (responseCode in 200..299) {
-                    connection.inputStream.bufferedReader().readText()
-                } else {
-                    connection.errorStream?.bufferedReader()?.readText()
-                        ?: "Error $responseCode"
-                }
-
-                val resultText = if (responseCode in 200..299) {
+                val resultText = if (success) {
                     try {
                         val json = JSONObject(responseText)
 
@@ -196,19 +249,42 @@ Responde claro en español.
                         builder.toString()
 
                     } catch (e: Exception) {
-                        "❌ ERROR PARSEO:\n${e.message}\n$responseText"
+                        if (isDeveloperMode)
+                            "❌ ERROR PARSEO:\n${e.message}\n$responseText"
+                        else
+                            generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                     }
                 } else {
-                    "❌ ERROR $responseCode:\n$responseText"
+                    if (isDeveloperMode)
+                        "❌ ERROR TOTAL:\n$responseText"
+                    else
+                        generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
+
+                val ingredientLines = resultText
+                    .substringAfter("INGREDIENTES DETECTADOS", "")
+                    .substringBefore("RECETAS", "")
+                    .lines()
+                    .filter { it.trim().startsWith("-") || it.trim().startsWith("•") }
+                    .map {
+                        it.replace("-", "")
+                            .replace("•", "")
+                            .trim()
+                            .lowercase()
+                    }
+                    .filter { it.isNotEmpty() }
 
                 withContext(Dispatchers.Main) {
                     output.text = resultText
+                    onIngredientsDetected?.invoke(ingredientLines)
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    output.text = "❌ ERROR CRÍTICO:\n${e.message}"
+                    if (isDeveloperMode)
+                        output.text = "❌ ERROR CRÍTICO:\n${e.message}"
+                    else
+                        output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
             }
         }
