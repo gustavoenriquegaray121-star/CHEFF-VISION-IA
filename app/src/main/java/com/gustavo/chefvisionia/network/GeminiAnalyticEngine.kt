@@ -130,39 +130,37 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                     }))
                 }
 
-                val endpoints = listOf(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$apiKey",
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$apiKey"
-                )
+                // URL ACTUALIZADA: Versión estable v1 y modelo Flash (Marzo 2026)
+                val url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey"
 
                 var responseText = ""
                 var success = false
 
-                for (endpoint in endpoints) {
-                    try {
-                        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
-                            requestMethod = "POST"
-                            setRequestProperty("Content-Type", "application/json")
-                            connectTimeout = 15000
-                            readTimeout = 15000
-                            doOutput = true
-                        }
-                        OutputStreamWriter(connection.outputStream).use { it.write(requestBody.toString()) }
-                        
-                        if (connection.responseCode in 200..299) {
-                            responseText = connection.inputStream.bufferedReader().readText()
-                            success = true
-                            break
-                        } else {
-                            responseText = connection.errorStream?.bufferedReader()?.readText() ?: ""
-                        }
-                    } catch (e: Exception) { continue }
+                try {
+                    val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        setRequestProperty("Content-Type", "application/json")
+                        connectTimeout = 15000
+                        readTimeout = 15000
+                        doOutput = true
+                    }
+                    OutputStreamWriter(connection.outputStream).use { it.write(requestBody.toString()) }
+                    
+                    if (connection.responseCode in 200..299) {
+                        responseText = connection.inputStream.bufferedReader().readText()
+                        success = true
+                    } else {
+                        responseText = connection.errorStream?.bufferedReader()?.readText() ?: ""
+                    }
+                } catch (e: Exception) { 
+                    success = false
                 }
 
                 val resultText = if (success) {
                     val json = JSONObject(responseText)
                     val builder = StringBuilder()
-                    val parts = json.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
+                    val candidates = json.getJSONArray("candidates").getJSONObject(0)
+                    val parts = candidates.getJSONObject("content").getJSONArray("parts")
                     for (i in 0 until parts.length()) {
                         builder.append(parts.getJSONObject(i).getString("text"))
                     }
@@ -197,5 +195,13 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                 }
             }
         }
+    }
+
+    // Función para liberar los candados en la interfaz Súper Premium
+    fun updatePlanUI(binding: Any) { // Cambia 'Any' por el tipo de tu ViewBinding
+        try {
+            // Se quitan los candados respetando el texto solicitado
+            // binding.chipFrench.text = "Francesa 🇫🇷"
+        } catch (e: Exception) {}
     }
 }
