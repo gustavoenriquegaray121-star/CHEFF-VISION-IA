@@ -21,12 +21,17 @@ object GeminiAnalyticEngine {
     var apiKey: String = BuildConfig.GEMINI_API_KEY 
 
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
+    
+    // Callback para el Semáforo de Frescura y Negocio
     var onInventoryDataReady: ((JSONArray) -> Unit)? = null
 
     private val isDeveloperMode = true
 
     private val isDemoMode: Boolean
         get() = apiKey.isEmpty() && !isDeveloperMode
+
+    fun hasPremiumAccess(userHasPaid: Boolean): Boolean = userHasPaid || isDeveloperMode
+    fun hasSuperPremiumAccess(userHasPaid: Boolean): Boolean = userHasPaid || isDeveloperMode
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val outputStream = ByteArrayOutputStream()
@@ -35,8 +40,15 @@ object GeminiAnalyticEngine {
     }
 
     private fun generarRespuestaDemo(cuisine: String, gourmet: Boolean, fitness: Boolean, dessert: Boolean): String {
+        val extra = when {
+            fitness -> "\n💪 Incluye macros y enfoque proteico."
+            dessert -> "\n🍰 Incluye sugerencia de postre."
+            gourmet -> "\n🍷 Incluye maridaje profesional."
+            else -> ""
+        }
         return """
 ⚡ MODO DEMO ACTIVO (Sin conexión)
+
 🍳 INGREDIENTES DETECTADOS:
 - tomate (🔴 ¡Úsame hoy!)
 - cebolla (🟢 Fresco)
@@ -44,6 +56,7 @@ object GeminiAnalyticEngine {
 
 🍽️ RECETAS SUGERIDAS ($cuisine):
 1. 🍗 Pollo al ajo con tomate (Prioridad: Desperdicio Cero)
+$extra
         """.trimIndent()
     }
 
@@ -68,16 +81,36 @@ object GeminiAnalyticEngine {
                     return@withContext
                 }
 
-                val bitmap = BitmapFactory.decodeFile(path) ?: return@withContext
+                val bitmap = BitmapFactory.decodeFile(path) ?: run {
+                    withContext(Dispatchers.Main) { output.text = generarRespuestaDemo(cuisine, gourmet, fitness, dessert) }
+                    return@withContext
+                }
 
                 val base64Image = bitmapToBase64(bitmap)
                 val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
 
                 val promptText = """
-Eres Chef Vision IA 🍳. Responde en español.
-1. INGREDIENTES DETECTADOS: Lista lo que ves.
-2. 3 RECETAS ($cuisine - $country): Sugiere platos usando esos ingredientes.
-3. DATOS DE INVENTARIO: Genera un JSON al final con este formato: [{"ingrediente": "nombre", "shelf_life": 5, "timestamp": "$timestamp", "color": "verde"}]
+Eres Chef Vision IA 🍳. Tu misión es ser un asistente proactivo de cocina y negocio.
+
+REGLAS DE ANALISIS:
+1. SOLO ingredientes visibles.
+2. Calcula 'shelf_life' (días de vida restante estimados).
+3. Si el inventario ($inventoryContext) tiene productos viejos, PRIORIZA recetas para usarlos (Desperdicio Cero).
+
+ESTRUCTURA DE RESPUESTA (Responde en este orden):
+
+1. INGREDIENTES DETECTADOS:
+(Lista con nombre y estado de frescura)
+
+2. 3 RECETAS ($cuisine - $country):
+(Nombre, Tiempo, Macros si es fitness, Maridaje si es gourmet, Postre si aplica)
+
+3. DATOS DE INVENTARIO (ESTRICTO JSON AL FINAL):
+Genera un JSON con esta estructura para mi base de datos:
+[{"ingrediente": "nombre", "shelf_life": dias, "timestamp": "$timestamp", "color": "rojo/amarillo/verde"}]
+
+4. SUGERENCIA DE COMPRA (SORIANA):
+Si falta algo básico para las recetas, menciónalo como oferta.
                 """.trimIndent()
 
                 val requestBody = JSONObject().apply {
@@ -94,42 +127,72 @@ Eres Chef Vision IA 🍳. Responde en español.
                     }))
                 }
 
-                // URL CORREGIDA: Usando v1beta que es la más estable para el modelo Flash con imágenes
-                val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+                // Aquí corregí la lista de endpoints para que NO den 404
+                val endpoints = listOf(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey",
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
+                )
 
-                val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json")
-                    doOutput = true
+                var responseText = ""
+                var success = false
+
+                for (endpoint in endpoints) {
+                    try {
+                        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                            requestMethod = "POST"
+                            setRequestProperty("Content-Type", "application/json")
+                            connectTimeout = 15000
+                            readTimeout = 15000
+                            doOutput = true
+                        }
+                        OutputStreamWriter(connection.outputStream).use { it.write(requestBody.toString()) }
+                        
+                        if (connection.responseCode in 200..299) {
+                            responseText = connection.inputStream.bufferedReader().readText()
+                            success = true
+                            break
+                        } else {
+                            responseText = connection.errorStream?.bufferedReader()?.readText() ?: ""
+                        }
+                    } catch (e: Exception) { continue }
                 }
-                
-                OutputStreamWriter(connection.outputStream).use { it.write(requestBody.toString()) }
-                
-                val responseCode = connection.responseCode
-                val responseText = if (responseCode in 200..299) {
-                    connection.inputStream.bufferedReader().readText()
+
+                val resultText = if (success) {
+                    val json = JSONObject(responseText)
+                    val builder = StringBuilder()
+                    val parts = json.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
+                    for (i in 0 until parts.length()) {
+                        builder.append(parts.getJSONObject(i).getString("text"))
+                    }
+                    builder.toString()
                 } else {
-                    connection.errorStream?.bufferedReader()?.readText() ?: "Error $responseCode"
+                    if (isDeveloperMode) "❌ ERROR TOTAL:\n$responseText" else generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
+                }
+
+                // Extracción de datos para el Semáforo y Lista de Mandado
+                val startJson = resultText.indexOf("[")
+                val endJson = resultText.lastIndexOf("]")
+                if (startJson != -1 && endJson != -1) {
+                    try {
+                        val jsonArr = JSONArray(resultText.substring(startJson, endJson + 1))
+                        withContext(Dispatchers.Main) { 
+                            onInventoryDataReady?.invoke(jsonArr)
+                            val ingredientsList = mutableListOf<String>()
+                            for (i in 0 until jsonArr.length()) {
+                                ingredientsList.add(jsonArr.getJSONObject(i).getString("ingrediente"))
+                            }
+                            onIngredientsDetected?.invoke(ingredientsList)
+                        }
+                    } catch (e: Exception) {}
                 }
 
                 withContext(Dispatchers.Main) {
-                    if (responseCode in 200..299) {
-                        val json = JSONObject(responseText)
-                        val text = json.getJSONArray("candidates")
-                            .getJSONObject(0)
-                            .getJSONObject("content")
-                            .getJSONArray("parts")
-                            .getJSONObject(0)
-                            .getString("text")
-                        output.text = text
-                    } else {
-                        output.text = "❌ Error de conexión ($responseCode). Revisa tu API Key."
-                    }
+                    output.text = resultText
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    output.text = "❌ Error: ${e.message}"
+                    output.text = if (isDeveloperMode) "❌ ERROR CRÍTICO:\n${e.message}" else generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
             }
         }
