@@ -32,7 +32,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         try {
             binding = ActivityMainBinding.inflate(layoutInflater)
             setContentView(binding.root)
@@ -41,6 +40,7 @@ class MainActivity : AppCompatActivity() {
 
             InventoryManager.load(this)
             showAlerts()
+            updatePlanUI()
 
             GeminiAnalyticEngine.onIngredientsDetected = { ingredients ->
                 if (ingredients.isNotEmpty()) {
@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
 
             binding.chipMexican.isChecked = true
 
-            // Truco secreto desarrollador
+            // Truco secreto desarrollador — mantén presionado el título
             binding.tvTitle.setOnLongClickListener {
                 scanCount = 0
                 getSharedPreferences("ChefPrefs", MODE_PRIVATE)
@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ))
 
+            // Botón escanear con contador
             binding.btnCapture.setOnClickListener {
                 val prefs = getSharedPreferences("ChefPrefs", MODE_PRIVATE)
                 val lastDate = prefs.getString("last_scan_date", "")
@@ -85,21 +86,30 @@ class MainActivity : AppCompatActivity() {
                     scanCount = prefs.getInt("scans_today", 0)
                 }
 
-                if (userPlan == "GRATIS" && scanCount >= 3) {
+                val maxScans = when (userPlan) {
+                    "PREMIUM" -> 20
+                    "SUPER" -> 999
+                    else -> 3
+                }
+
+                if (userPlan == "GRATIS" && scanCount >= maxScans) {
                     showSubscriptionDialog()
                 } else {
                     if (imageCapture != null) {
                         takePhoto()
-                        scanCount++
-                        prefs.edit().putInt("scans_today", scanCount).apply()
-                        Toast.makeText(this, "📸 Escaneo $scanCount de 3 hoy", Toast.LENGTH_SHORT).show()
+                        if (userPlan != "SUPER") {
+                            scanCount++
+                            prefs.edit().putInt("scans_today", scanCount).apply()
+                            val remaining = maxScans - scanCount
+                            Toast.makeText(this, "📸 Te quedan $remaining escaneos hoy", Toast.LENGTH_SHORT).show()
+                        }
                     } else {
-                        binding.tvRecipes.text = "⚠️ Cámara no lista."
+                        binding.tvRecipes.text = "⚠️ Cámara no lista. Verifica permisos."
                     }
                 }
             }
 
-            // Chips bloqueados para plan gratis
+            // Chips bloqueados plan gratis
             listOf(binding.chipThai, binding.chipJapanese, binding.chipIndian,
                 binding.chipMediterranean, binding.chipAmerican, binding.chipFrench).forEach { chip ->
                 chip.setOnClickListener {
@@ -111,6 +121,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            // Gourmet — Premium
             binding.chipGourmet.setOnClickListener {
                 if (userPlan == "GRATIS") {
                     binding.chipGourmet.isChecked = false
@@ -118,6 +129,22 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            // Fitness, Vegano, Postres — Súper Premium
+            listOf(binding.chipFitness, binding.chipVegan, binding.chipDessert).forEach { chip ->
+                chip.setOnClickListener {
+                    if (userPlan != "SUPER") {
+                        chip.isChecked = false
+                        showSubscriptionDialog()
+                    }
+                }
+            }
+
+            // Botón upgrade
+            binding.btnUpgrade.setOnClickListener {
+                showSubscriptionDialog()
+            }
+
+            // Lista de compras
             binding.btnShoppingList.setOnClickListener {
                 val list = InventoryManager.getShoppingList()
                 binding.tvRecipes.text = list
@@ -136,11 +163,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun updatePlanUI() {
+        binding.tvPlan.text = when (userPlan) {
+            "PREMIUM" -> "⭐ Plan Premium — 20 escaneos/día"
+            "SUPER"   -> "👑 Plan Súper Premium — Ilimitado"
+            else      -> "🆓 Plan Gratuito — 3 escaneos/día"
+        }
+    }
+
     private fun showSubscriptionDialog() {
         MaterialAlertDialogBuilder(this)
             .setTitle("✨ ¡Desbloquea todo el sabor!")
             .setMessage(
-                "Has alcanzado el límite diario o intentas usar una función exclusiva.\n\n" +
+                "Has alcanzado el límite o intentas usar una función exclusiva.\n\n" +
                 "⭐ PREMIUM (\$699/año):\n" +
                 "• 20 escaneos diarios\n" +
                 "• Todas las cocinas internacionales\n" +
@@ -148,15 +183,16 @@ class MainActivity : AppCompatActivity() {
                 "• Sin anuncios\n\n" +
                 "👑 SÚPER PREMIUM (\$899/año):\n" +
                 "• Escaneos ILIMITADOS\n" +
-                "• Modo Fitness (Calorías) 💪\n" +
+                "• Modo Fitness con calorías 💪\n" +
                 "• Postres, Vegano y Maridajes 🍷\n" +
-                "• Lista de compras compartible"
+                "• Lista de compras por WhatsApp\n" +
+                "• Alertas inteligentes de despensa"
             )
             .setPositiveButton("👑 SÚPER PREMIUM") { _, _ ->
-                Toast.makeText(this, "Próximamente...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "🚀 Próximamente disponible", Toast.LENGTH_SHORT).show()
             }
             .setNeutralButton("⭐ PREMIUM") { _, _ ->
-                Toast.makeText(this, "Próximamente...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "🚀 Próximamente disponible", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Luego") { dialog, _ -> dialog.dismiss() }
             .show()
@@ -231,6 +267,9 @@ class MainActivity : AppCompatActivity() {
                             cuisine = getCuisineSelected(),
                             country = country,
                             gourmet = binding.chipGourmet.isChecked,
+                            fitness = binding.chipFitness.isChecked,
+                            vegan = binding.chipVegan.isChecked,
+                            dessert = binding.chipDessert.isChecked,
                             inventoryContext = InventoryManager.getInventoryContext()
                         )
                         binding.btnCapture.isEnabled = true
