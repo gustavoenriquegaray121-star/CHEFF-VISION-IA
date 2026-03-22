@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 object GeminiAnalyticEngine {
 
     var apiKey: String = ""
-    
+
     private fun getModel() = GenerativeModel(
         modelName = "gemini-1.5-flash-001",
         apiKey = apiKey
@@ -24,6 +24,9 @@ object GeminiAnalyticEngine {
         cuisine: String,
         country: String,
         gourmet: Boolean,
+        fitness: Boolean,
+        vegan: Boolean,
+        dessert: Boolean,
         inventoryContext: String
     ) {
         withContext(Dispatchers.IO) {
@@ -36,13 +39,24 @@ object GeminiAnalyticEngine {
                     return@withContext
                 }
 
-                val gourmetText = if (gourmet)
-                    "presentación gourmet de restaurante de lujo"
-                else "casera y fácil"
+                val modeText = when {
+                    fitness -> "fitness con calorías aproximadas y alto contenido proteico"
+                    vegan   -> "100% vegana sin productos de origen animal"
+                    dessert -> "postres y dulces creativos"
+                    gourmet -> "presentación gourmet de restaurante de lujo"
+                    else    -> "casera, fácil y económica"
+                }
+
+                val fitnessExtra = if (fitness)
+                    "\nPara cada receta incluye: calorías aproximadas, gramos de proteína, carbohidratos y grasas."
+                else ""
+
+                val wineExtra = if (gourmet)
+                    "\nPara cada receta sugiere un vino o bebida que combine perfecto."
+                else ""
 
                 val inventoryNote = if (inventoryContext.isNotEmpty())
-                    "\n\nIngredientes en despensa (con días desde compra): " +
-                    "$inventoryContext. Prioriza los más antiguos en tus sugerencias."
+                    "\n\nIngredientes en despensa (con días desde compra): $inventoryContext. Prioriza los más antiguos."
                 else ""
 
                 val prompt = """
@@ -52,16 +66,17 @@ object GeminiAnalyticEngine {
                     
                     1. 📦 INGREDIENTES DETECTADOS: Lista todos los ingredientes que ves.
                     
-                    2. 🍽️ 3 RECETAS SUGERIDAS (cocina $cuisine de $country, estilo $gourmetText):
+                    2. 🍽️ 3 RECETAS SUGERIDAS (cocina $cuisine de $country, estilo $modeText):
                        Para cada receta incluye:
                        - Nombre del platillo
                        - Tiempo de preparación
                        - Ingredientes necesarios
                        - Pasos resumidos
                        - Tip del chef
+                       $fitnessExtra
+                       $wineExtra
                     
-                    3. 🌍 TOQUE LOCAL: Una receta especial típica de $country 
-                       con estos ingredientes.
+                    3. 🌍 TOQUE LOCAL: Una receta especial típica de $country con estos ingredientes.
                     
                     $inventoryNote
                     
