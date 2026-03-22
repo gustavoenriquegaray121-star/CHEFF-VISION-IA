@@ -127,7 +127,7 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                     }))
                 }
 
-                // Aquí corregí la lista de endpoints para que NO den 404
+                // Lista de endpoints original restaurada y actualizada para evitar el 404
                 val endpoints = listOf(
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey",
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
@@ -169,7 +169,7 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                     if (isDeveloperMode) "❌ ERROR TOTAL:\n$responseText" else generarRespuestaDemo(cuisine, gourmet, fitness, dessert)
                 }
 
-                // Extracción de datos para el Semáforo y Lista de Mandado
+                // Lógica de extracción de datos para Inventario y Semáforo restaurada
                 val startJson = resultText.indexOf("[")
                 val endJson = resultText.lastIndexOf("]")
                 if (startJson != -1 && endJson != -1) {
