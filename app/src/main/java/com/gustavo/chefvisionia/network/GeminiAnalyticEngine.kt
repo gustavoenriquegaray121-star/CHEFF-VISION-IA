@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 
 object GeminiAnalyticEngine {
 
-    private const val API_KEY = "AIzaSyCYONYuJMUiFMrqyOkoFxxiVf4hxgT9XbM"
+    private const val API_KEY = BuildConfig.GEMINI_API_KEY
     private val model = GenerativeModel(
         modelName = "gemini-1.5-flash-001",
         apiKey = API_KEY
