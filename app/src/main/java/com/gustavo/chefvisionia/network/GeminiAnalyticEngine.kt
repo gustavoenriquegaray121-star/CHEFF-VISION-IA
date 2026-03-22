@@ -18,8 +18,9 @@ object GeminiAnalyticEngine {
     var apiKey: String = ""
     var onIngredientsDetected: ((List<String>) -> Unit)? = null
 
-    // ✅ MODO DEMO
-    val isDemoMode = true
+    // DEMO SOLO SI NO HAY API
+    private val isDemoMode: Boolean
+        get() = apiKey.isEmpty()
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val outputStream = ByteArrayOutputStream()
@@ -27,20 +28,24 @@ object GeminiAnalyticEngine {
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 
-    private fun generarRespuestaDemo(): String {
+    // 💎 DEMO PRO (MEJORADO)
+    private fun generarRespuestaDemo(cuisine: String): String {
         return """
+⚡ MODO DEMO ACTIVO
+
+Estamos optimizando la conexión con nuestro motor de inteligencia culinaria.
+Mientras tanto, aquí tienes una sugerencia inteligente:
+
 🍳 INGREDIENTES DETECTADOS:
-- tomate
-- cebolla
-- queso
-- huevo
+- ingredientes comunes de cocina
+- posible alimento procesado
 
-🍽️ RECETAS SUGERIDAS:
-1. Quesadillas caseras
-2. Omelette delicioso
-3. Ensalada fresca
+🍽️ RECETAS SUGERIDAS ($cuisine):
+1. Preparación rápida casera
+2. Platillo sencillo optimizado
+3. Opción económica y funcional
 
-💡 Tip del chef: Usa ingredientes frescos para mejor sabor.
+💡 Tip del chef: Usa buena iluminación y enfoca bien los ingredientes para obtener resultados más precisos.
         """.trimIndent()
     }
 
@@ -58,22 +63,11 @@ object GeminiAnalyticEngine {
         withContext(Dispatchers.IO) {
             try {
 
-                // ✅ DEMO DIRECTO (sin API)
+                // DEMO SI NO HAY API
                 if (isDemoMode) {
-                    val demo = generarRespuestaDemo()
-
-                    val ingredientLines = listOf("tomate", "cebolla", "queso", "huevo")
-
                     withContext(Dispatchers.Main) {
-                        output.text = demo
-                        onIngredientsDetected?.invoke(ingredientLines)
-                    }
-                    return@withContext
-                }
-
-                if (apiKey.isEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        output.text = "❌ API Key no configurada."
+                        output.text = generarRespuestaDemo(cuisine)
+                        onIngredientsDetected?.invoke(listOf("ingrediente demo"))
                     }
                     return@withContext
                 }
@@ -81,7 +75,7 @@ object GeminiAnalyticEngine {
                 val bitmap = BitmapFactory.decodeFile(path)
                 if (bitmap == null) {
                     withContext(Dispatchers.Main) {
-                        output.text = "❌ No se pudo procesar la imagen."
+                        output.text = generarRespuestaDemo(cuisine)
                     }
                     return@withContext
                 }
@@ -101,7 +95,7 @@ object GeminiAnalyticEngine {
                 else ""
 
                 val wineExtra = if (gourmet)
-                    "\nSugiere un vino o bebida ideal."
+                    "\nSugiere un vino o bebida ideal que haga maridaje perfecto."
                 else ""
 
                 val inventoryNote = if (inventoryContext.isNotEmpty())
@@ -111,8 +105,13 @@ object GeminiAnalyticEngine {
                 val promptText = """
 Eres Chef Vision IA 🍳
 
+REGLAS:
+- SOLO usa ingredientes visibles en la imagen
+- NO inventes ingredientes
+- Si no estás seguro, dilo claramente
+
 1. INGREDIENTES DETECTADOS:
-Lista clara de ingredientes.
+Lista clara de ingredientes visibles.
 
 2. 3 RECETAS ($cuisine - $country, estilo $modeText):
 - Nombre
@@ -127,7 +126,7 @@ $wineExtra
 
 $inventoryNote
 
-Responde en español con emojis.
+Responde en español con estilo profesional, atractivo y apetitoso.
                 """.trimIndent()
 
                 val requestBody = JSONObject().apply {
@@ -147,13 +146,15 @@ Responde en español con emojis.
                 }
 
                 val url = URL(
-                    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey"
+                    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
                 )
 
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.doOutput = true
+                connection.connectTimeout = 30000
+                connection.readTimeout = 30000
 
                 OutputStreamWriter(connection.outputStream).use {
                     it.write(requestBody.toString())
@@ -173,9 +174,8 @@ Responde en español con emojis.
                         val json = JSONObject(responseText)
 
                         if (json.has("error")) {
-                            generarRespuestaDemo() // 🔥 fallback automático
+                            generarRespuestaDemo(cuisine)
                         } else {
-
                             val parts = json.getJSONArray("candidates")
                                 .getJSONObject(0)
                                 .getJSONObject("content")
@@ -194,10 +194,10 @@ Responde en español con emojis.
                         }
 
                     } catch (e: Exception) {
-                        generarRespuestaDemo() // 🔥 fallback si truena parseo
+                        generarRespuestaDemo(cuisine)
                     }
                 } else {
-                    generarRespuestaDemo() // 🔥 fallback si falla API
+                    generarRespuestaDemo(cuisine)
                 }
 
                 val ingredientLines = resultText
@@ -220,7 +220,7 @@ Responde en español con emojis.
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    output.text = generarRespuestaDemo() // 🔥 fallback total
+                    output.text = generarRespuestaDemo(cuisine)
                 }
             }
         }
