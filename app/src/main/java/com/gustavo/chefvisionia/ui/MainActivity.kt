@@ -38,6 +38,9 @@ class MainActivity : AppCompatActivity() {
             setContentView(binding.root)
 
             GeminiAnalyticEngine.apiKey = BuildConfig.GEMINI_API_KEY
+            
+            // Sincronizar plan con el estado de desarrollador del motor
+            userPlan = if (GeminiAnalyticEngine.hasSuperPremiumAccess(false)) "SUPER" else "GRATIS"
 
             InventoryManager.load(this)
             showAlerts()
@@ -117,13 +120,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Chips bloqueados — Premium
-            listOf(
+            // Chips — Lógica de desbloqueo para 9 cocinas
+            val premiumChips = listOf(
                 binding.chipThai, binding.chipJapanese, binding.chipIndian,
-                binding.chipMediterranean, binding.chipAmerican, binding.chipFrench
-            ).forEach { chip ->
+                binding.chipMediterranean, binding.chipAmerican, binding.chipFrench,
+                binding.chipItalian, binding.chipChinese
+            )
+            
+            premiumChips.forEach { chip ->
                 chip.setOnClickListener {
-                    if (userPlan == "GRATIS") {
+                    if (userPlan == "GRATIS" && !GeminiAnalyticEngine.hasPremiumAccess(false)) {
                         chip.isChecked = false
                         binding.chipMexican.isChecked = true
                         showSubscriptionDialog()
@@ -133,7 +139,7 @@ class MainActivity : AppCompatActivity() {
 
             // Gourmet = Premium
             binding.chipGourmet.setOnClickListener {
-                if (userPlan == "GRATIS") {
+                if (userPlan == "GRATIS" && !GeminiAnalyticEngine.hasPremiumAccess(false)) {
                     binding.chipGourmet.isChecked = false
                     showSubscriptionDialog()
                 }
@@ -142,7 +148,7 @@ class MainActivity : AppCompatActivity() {
             // Fitness, Vegano, Postres = Súper Premium
             listOf(binding.chipFitness, binding.chipVegan, binding.chipDessert).forEach { chip ->
                 chip.setOnClickListener {
-                    if (userPlan != "SUPER") {
+                    if (userPlan != "SUPER" && !GeminiAnalyticEngine.hasSuperPremiumAccess(false)) {
                         chip.isChecked = false
                         showSubscriptionDialog()
                     }
@@ -176,7 +182,6 @@ class MainActivity : AppCompatActivity() {
                     }
                     startActivity(intent)
                 } catch (e: Exception) {
-                    // WhatsApp no instalado — compartir con cualquier app
                     try {
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
@@ -195,10 +200,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updatePlanUI() {
-        binding.tvPlan.text = when (userPlan) {
-            "PREMIUM" -> "⭐ Plan Premium: 20 escaneos por día"
-            "SUPER"   -> "👑 Plan Súper Premium: escaneos ilimitados"
-            else      -> "🆓 Plan Gratuito: 3 escaneos por día (desayuno, comida y cena)"
+        val isDev = GeminiAnalyticEngine.hasSuperPremiumAccess(false)
+        
+        binding.tvPlan.text = when {
+            isDev || userPlan == "SUPER" -> "👑 Plan Súper Premium: escaneos ilimitados"
+            userPlan == "PREMIUM" -> "⭐ Plan Premium: 20 escaneos por día"
+            else -> "🆓 Plan Gratuito: 3 escaneos por día (desayuno, comida y cena)"
+        }
+
+        // Si es desarrollador o súper premium, quitamos los candados visualmente
+        if (isDev) {
+            binding.chipGourmet.text = "Gourmet 🍷"
+            binding.chipFitness.text = "Fitness 💪"
+            binding.chipVegan.text = "Vegano 🥗"
+            binding.chipDessert.text = "Postres 🍰"
+            binding.btnUpgrade.visibility = View.GONE // Ya no necesitas el botón de "Hazte Premium"
         }
     }
 
