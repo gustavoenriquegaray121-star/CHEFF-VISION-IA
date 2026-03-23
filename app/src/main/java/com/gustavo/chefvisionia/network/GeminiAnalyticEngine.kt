@@ -130,8 +130,8 @@ Si falta algo básico para las recetas, menciónalo como oferta.
                     }))
                 }
 
-                // URL CORREGIDA CON v1beta PARA QUITAR EL ERROR 404
-                val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+                // CORRECCIÓN FINAL: Cambiamos a gemini-pro-vision para evitar el error 404 de Flash
+                val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=$apiKey"
 
                 var responseText = ""
                 var success = false
